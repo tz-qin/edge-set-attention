@@ -18,8 +18,7 @@ We provide code for three main types of tasks:
 1. Graph-level
 2. Node-level
 3. Transfer learning (including support for 3D atomic coordinates)
-4. 
-These are separated since the algorithms require different implementation strategies.
+4. These are separated since the algorithms require different implementation strategies.
 
 # Data
 
