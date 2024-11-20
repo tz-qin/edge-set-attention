@@ -65,7 +65,7 @@ def create_edge_adjacency_mask(edge_index, num_edges):
     adjacency_mask = source_adjacency | target_adjacency | cross_adjacency
 
     # Mask out self-adjacency by setting the diagonal to False
-    adjacency_mask.fill_diagonal_(0)  # We use '0' here to indicate False in PyTorch boolean context
+    adjacency_mask.fill_diagonal_(0)  # We use "0" here to indicate False in PyTorch boolean context
 
     return adjacency_mask
 
@@ -98,7 +98,7 @@ def generate_consecutive_tensor(input_tensor, final):
 
     return result
 
-# This is needed if the standard 'nonzero' method from PyTorch fails
+# This is needed if the standard "nonzero" method from PyTorch fails
 # This alternative is slower but allows bypassing the problem until 64-bit
 # support is available
 def nonzero_chunked(ten, num_chunks):
@@ -250,7 +250,7 @@ class SABComplete(nn.Module):
         else:
             bn_dim = 32
 
-        if norm_type == 'LN':
+        if norm_type == "LN":
             if self.pre_or_post == "post":
                 if self.idx != 2:
                     self.norm = LN(dim_out, num_elements=self.set_max_items)
@@ -262,7 +262,7 @@ class SABComplete(nn.Module):
                 else:
                     self.norm = LN(dim_in)
                     
-        elif norm_type == 'BN':
+        elif norm_type == "BN":
             self.norm = BN(bn_dim)
 
         self.mlp_type = mlp_type
@@ -288,20 +288,20 @@ class SABComplete(nn.Module):
                     use_ln=use_mlp_ln,
                 )
 
-        if norm_type == 'LN':
+        if norm_type == "LN":
             if self.idx != 2:
                 self.norm_mlp = LN(dim_out, num_elements=self.set_max_items)
             else:
                 self.norm_mlp = LN(dim_out)
                 
-        elif norm_type == 'BN':
+        elif norm_type == "BN":
             self.norm_mlp = BN(bn_dim)
 
 
     def forward(self, inp):
         X, edge_index, batch_mapping, max_items, adj_mask = inp
 
-        if self.pre_or_post == 'pre':
+        if self.pre_or_post == "pre":
             X = self.norm(X)
 
         if self.idx == 1:
@@ -377,9 +377,9 @@ class PMAComplete(nn.Module):
 
         self.pma = PMA(dim_hidden, num_heads, num_outputs, dropout, xformers_or_torch_attn)
 
-        if norm_type == 'LN':
+        if norm_type == "LN":
             self.norm = LN(dim_hidden)
-        elif norm_type == 'BN':
+        elif norm_type == "BN":
             self.norm = BN(self.set_max_items)
 
         self.mlp_type = mlp_type
@@ -405,9 +405,9 @@ class PMAComplete(nn.Module):
                     use_ln=use_mlp_ln,
                 )
 
-        if norm_type == 'LN':
+        if norm_type == "LN":
             self.norm_mlp = LN(dim_hidden)
-        elif norm_type == 'BN':
+        elif norm_type == "BN":
             self.norm_mlp = BN(32)
 
 
@@ -506,12 +506,12 @@ class ESA(nn.Module):
         pma_encountered = False
         dim_pma = -1
 
-        has_pma = 'P' in self.layer_types
+        has_pma = "P" in self.layer_types
 
         for lt in self.layer_types:
             layer_in_dim = dim_hidden[layer_tracker]
             layer_num_heads = num_heads[layer_tracker]
-            if lt != 'P':
+            if lt != "P":
                 if has_pma:
                     layer_out_dim = dim_hidden[layer_tracker + 1]
                 else:
@@ -519,7 +519,7 @@ class ESA(nn.Module):
             else:
                 layer_out_dim = -1
 
-            if lt == 'S' and not pma_encountered:
+            if lt == "S" and not pma_encountered:
                 self.encoder.append(
                     SABComplete(
                         layer_in_dim,
@@ -544,9 +544,9 @@ class ESA(nn.Module):
                     )
                 )
                 
-                print(f'Added encoder SAB ({layer_in_dim}, {layer_out_dim}, {layer_num_heads})')
+                print(f"Added encoder SAB ({layer_in_dim}, {layer_out_dim}, {layer_num_heads})")
 
-            if lt == 'M' and not pma_encountered:
+            if lt == "M" and not pma_encountered:
                 self.encoder.append(
                     SABComplete(
                         layer_in_dim,
@@ -571,9 +571,9 @@ class ESA(nn.Module):
                     )
                 )
                 
-                print(f'Added encoder MAB ({layer_in_dim}, {layer_out_dim}, {layer_num_heads})')
+                print(f"Added encoder MAB ({layer_in_dim}, {layer_out_dim}, {layer_num_heads})")
                 
-            if lt == 'P':
+            if lt == "P":
                 pma_encountered = True
                 dim_pma = layer_in_dim
                 self.decoder = [
@@ -598,9 +598,9 @@ class ESA(nn.Module):
                     )
                 ]
 
-                print(f'Added decoder PMA ({layer_in_dim}, {layer_num_heads})')
+                print(f"Added decoder PMA ({layer_in_dim}, {layer_num_heads})")
 
-            if lt == 'S' and pma_encountered:
+            if lt == "S" and pma_encountered:
                 self.decoder.append(
                     SABComplete(
                         layer_in_dim,
@@ -625,9 +625,9 @@ class ESA(nn.Module):
                     )
                 )
 
-                print(f'Added decoder SAB ({layer_in_dim}, {layer_out_dim}, {layer_num_heads})')
+                print(f"Added decoder SAB ({layer_in_dim}, {layer_out_dim}, {layer_num_heads})")
 
-            if lt != 'P':
+            if lt != "P":
                 layer_tracker += 1
 
         self.encoder = nn.Sequential(*self.encoder)

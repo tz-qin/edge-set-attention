@@ -5,14 +5,14 @@ def collate_data_list(data_list):
     if len(data_list) == 1:
         return data_list[0], None
 
-    print('Collating...')
+    print("Collating...")
     data, slices, _ = collate(
         data_list[0].__class__,
         data_list=data_list,
         increment=False,
         add_batch=False,
     )
-    print('Collating finished!')
+    print("Collating finished!")
 
     return data, slices
 

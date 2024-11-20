@@ -8,7 +8,7 @@ from data_loading.data_loading import get_dataset_train_val_test
 
 
 def check_is_node_level_dataset(dataset_name):
-    if dataset_name in ["PPI", 'Cora', 'CiteSeer']:
+    if dataset_name in ["PPI", "Cora", "CiteSeer"]:
         return True
     elif "infected" in dataset_name:
         return True

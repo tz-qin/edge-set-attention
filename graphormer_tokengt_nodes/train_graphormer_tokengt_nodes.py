@@ -40,7 +40,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 
 def check_is_node_level_dataset(dataset_name):
-    if dataset_name in ["PPI", 'Cora', 'CiteSeer']:
+    if dataset_name in ["PPI", "Cora", "CiteSeer"]:
         return True
     elif "infected" in dataset_name:
         return True
@@ -110,9 +110,9 @@ def main():
     use_bfloat16 = args.bfloat16 == "yes"
     ckpt_path = args.ckpt_path
 
-    if args.architecture == 'graphormer':
+    if args.architecture == "graphormer":
         get_dataset_splits = get_dataset_train_val_test_graphormer
-    elif args.architecture == 'tokengt':
+    elif args.architecture == "tokengt":
         get_dataset_splits = get_dataset_train_val_test_tokengt
 
     train, val, test, num_classes, task_type, scaler, train_mask, val_mask, test_mask = get_dataset_splits(
@@ -276,10 +276,10 @@ def main():
     logs_dir = os.path.join(args.out_dir, "logs")
     Path(logs_dir).mkdir(exist_ok=True, parents=True)
 
-    if 'struct' in args.dataset_name:
+    if "struct" in args.dataset_name:
         metric_for_best_model = "Average_MAE"
         greater_is_better = False
-    elif 'fn' in args.dataset_name:
+    elif "fn" in args.dataset_name:
         metric_for_best_model = "AP"
         greater_is_better = True
     else:

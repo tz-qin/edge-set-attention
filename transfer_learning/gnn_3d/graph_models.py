@@ -805,7 +805,7 @@ class Estimator(pl.LightningModule):
         else:
             opt = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=self.optimiser_weight_decay)
 
-        self.monitor_loss_name = 'Validation MCC' if 'MCC' in self.monitor_loss_name or self.monitor_loss_name == 'MCC' else self.monitor_loss_name
+        self.monitor_loss_name = "Validation MCC" if "MCC" in self.monitor_loss_name or self.monitor_loss_name == "MCC" else self.monitor_loss_name
         mode = "max" if "MCC" in self.monitor_loss_name else "min"
 
         opt_dict = {

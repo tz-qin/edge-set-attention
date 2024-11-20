@@ -36,7 +36,7 @@ def validate_argparse_arguments(argsdict):
 
 
 def get_wandb_name(argsdict):
-    name = ''
+    name = ""
 
     if argsdict["apply_attention_on"] == "node":
         name = "NSA"
@@ -46,7 +46,7 @@ def get_wandb_name(argsdict):
     name += f"+{''.join(argsdict['layer_types'])}"
 
     if "dataset" not in argsdict:
-        dataset = 'QM9-TF'
+        dataset = "QM9-TF"
     else:
         dataset = argsdict['dataset']
 

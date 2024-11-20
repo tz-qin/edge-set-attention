@@ -317,7 +317,7 @@ class TargetToY(T.BaseTransform):
         self.target_name = target_name
 
     def forward(self, data):
-        data.y = getattr(data, f'y_{self.target_name}')
+        data.y = getattr(data, f"y_{self.target_name}")
         return data
     
     

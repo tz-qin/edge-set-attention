@@ -25,10 +25,10 @@ from utils.posenc_encoders.laplace_pos_encoder import LapPENodeEncoder
 from utils.posenc_encoders.kernel_pos_encoder import KernelPENodeEncoder
 
 # Task names for the LRGB peptides-func benchmark
-pept_struct_target_names = ['Inertia_mass_a', 'Inertia_mass_b', 'Inertia_mass_c',
-                        'Inertia_valence_a', 'Inertia_valence_b',
-                        'Inertia_valence_c', 'length_a', 'length_b', 'length_c',
-                        'Spherocity', 'Plane_best_fit']
+pept_struct_target_names = ["Inertia_mass_a", "Inertia_mass_b", "Inertia_mass_c",
+                        "Inertia_valence_a", "Inertia_valence_b",
+                        "Inertia_valence_c", "length_a", "length_b", "length_c",
+                        "Spherocity", "Plane_best_fit"]
 
 
 def nearest_multiple_of_8(n):
@@ -166,14 +166,14 @@ class Estimator(pl.LightningModule):
         elif self.norm_type == "LN":
             norm_fn = LN
 
-        if self.apply_attention_on == 'node':
+        if self.apply_attention_on == "node":
             in_dim = self.num_features
             if self.rwse_encoder is not None:
                 in_dim += 24
             if self. lap_encoder is not None:
                 in_dim += 4
             
-            if self.mlp_type in ['standard', "gated_mlp"]:
+            if self.mlp_type in ["standard", "gated_mlp"]:
                 self.node_mlp = SmallMLP(
                     in_dim=in_dim,
                     inter_dim=128,
@@ -184,7 +184,7 @@ class Estimator(pl.LightningModule):
                 )
 
             # Uncomment if you want the gated MLP here
-            # elif self.mlp_type == 'gated_mlp':
+            # elif self.mlp_type == "gated_mlp":
             #     self.node_mlp = GatedMLPMulti(
             #         in_dim=in_dim,
             #         out_dim=self.hidden_dims[0],
@@ -195,7 +195,7 @@ class Estimator(pl.LightningModule):
             #     )
 
 
-        elif self.apply_attention_on == 'edge':
+        elif self.apply_attention_on == "edge":
             in_dim = self.num_features
             if self.rwse_encoder is not None:
                 in_dim += 24
@@ -206,7 +206,7 @@ class Estimator(pl.LightningModule):
             if self.edge_dim is not None:
                 in_dim += self.edge_dim
             
-            if self.mlp_type in ['standard', "gated_mlp"]:
+            if self.mlp_type in ["standard", "gated_mlp"]:
                 self.node_edge_mlp = SmallMLP(
                     in_dim=in_dim,
                     inter_dim=128,
@@ -218,7 +218,7 @@ class Estimator(pl.LightningModule):
 
             # Uncomment if you want the gated MLP here
 
-            # elif self.mlp_type == 'gated_mlp':
+            # elif self.mlp_type == "gated_mlp":
             #     self.node_edge_mlp = GatedMLPMulti(
             #         in_dim=in_dim,
             #         out_dim=self.hidden_dims[0],
@@ -258,7 +258,7 @@ class Estimator(pl.LightningModule):
 
         self.st_fast = ESA(**st_args)
 
-        if self.mlp_type in ['standard', "gated_mlp"]:
+        if self.mlp_type in ["standard", "gated_mlp"]:
             self.output_mlp = SmallMLP(
                 in_dim=self.graph_dim,
                 inter_dim=128,
@@ -272,7 +272,7 @@ class Estimator(pl.LightningModule):
 
         # Uncomment if you want the gated MLP here
             
-        # elif self.mlp_type == 'gated_mlp':
+        # elif self.mlp_type == "gated_mlp":
         #     self.output_mlp = GatedMLPMulti(
         #         in_dim=self.graph_dim,
         #         out_dim=self.linear_output_size,
@@ -335,7 +335,7 @@ class Estimator(pl.LightningModule):
     def configure_optimizers(self):
         opt = bnb.optim.AdamW8bit(self.parameters(), lr=self.lr, weight_decay=self.optimiser_weight_decay)
 
-        self.monitor_loss_name = 'Validation MCC' if 'MCC' in self.monitor_loss_name or self.monitor_loss_name == 'MCC' else self.monitor_loss_name
+        self.monitor_loss_name = "Validation MCC" if "MCC" in self.monitor_loss_name or self.monitor_loss_name == "MCC" else self.monitor_loss_name
         mode = "max" if "MCC" in self.monitor_loss_name else "min"
 
         opt_dict = {
@@ -376,15 +376,15 @@ class Estimator(pl.LightningModule):
                 predictions = predictions.squeeze().float()
                 y = y.squeeze().long()
 
-                if step_type == 'train' and self.train_mask is not None:
+                if step_type == "train" and self.train_mask is not None:
                     predictions = predictions[self.train_mask]
                     y = y[self.train_mask]
                 
-                if step_type == 'validation' and self.val_mask is not None:
+                if step_type == "validation" and self.val_mask is not None:
                     predictions = predictions[self.val_mask]
                     y = y[self.val_mask]
 
-                if 'test' in step_type and self.test_mask is not None:
+                if "test" in step_type and self.test_mask is not None:
                     predictions = predictions[self.test_mask]
                     y = y[self.test_mask]
 

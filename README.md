@@ -339,15 +339,15 @@ You must disable the import of `bnb` when using the `fairseq` environment and sw
 
 ## Shortest paths (infected)
 
-```python -m esa.train --dataset infected --dataset-download-dir <DS_DIR> --dataset-one-hot --lr 0.0001 --batch-size 128 --norm-type BN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 256 --apply-attention-on node --use-mlps --mlp-hidden-size 256 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJECT> --hidden-dims 256 256 256 256 256 --num-heads 16 16 16 16 16 --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type standard --use-bfloat16 --layer-types M S M S M --pre-or-post post```
+```python -m esa.train --dataset infected+15000 --dataset-download-dir <DS_DIR> --dataset-one-hot --lr 0.0001 --batch-size 128 --norm-type BN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 256 --apply-attention-on node --use-mlps --mlp-hidden-size 256 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJECT> --hidden-dims 256 256 256 256 256 --num-heads 16 16 16 16 16 --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type standard --use-bfloat16 --layer-types M S M S M --pre-or-post post```
 
-Note that for the shortest path (infected) datasets, the convention is to specify the dataset name as 'infected': `--dataset infected+15000` or `--dataset infected+30000` and provide the path to one of the included datasets, e.g. `--dataset-download-dir 'data_loading/datasets/shortest_path_datasets/ER+numn=15000+edge_p=0.00009+num_inf=40+max_p=20.pt'`.
+Note that for the shortest path (infected) datasets, the convention is to specify the dataset name as `infected+<NUM_NODES>`: `--dataset infected+15000` or `--dataset infected+30000` and provide the path to the directory containing the infected datasets, e.g. `--dataset-download-dir datasets/infected/`.
 
 ## Heterophily datasets
 
 ```python -m esa.train --dataset hetero+squirrel_filtered --dataset-download-dir <DS_DIR> --dataset-one-hot --lr 0.0001 --batch-size 128 --norm-type BN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 256 --apply-attention-on node --use-mlps --mlp-hidden-size 256 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJECT> --hidden-dims 256 256 256 256 256 --num-heads 16 16 16 16 16 --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type standard --use-bfloat16 --layer-types M S M S M --pre-or-post post```
 
-Note that the convention for heterophily datasets is to provide the dataset name in the format `--dataset hetero+<ds_name>` (emphasis on the mandatory `hetero+` part). The part after the plus sign can be any of the included datasets, i.e. `squirrel_filtered`, `chameleon_filtered`, `roman_empire`, `amazon_ratings`, `minesweeper`, `tolokers`.
+Note that the convention for heterophily datasets is to provide the dataset name in the format `--dataset hetero+<DS_NAME>` (emphasis on the mandatory `hetero+` part). The part after the plus sign can be any of the included datasets, i.e. `squirrel_filtered`, `chameleon_filtered`, `roman_empire`, `amazon_ratings`, `minesweeper`, `tolokers`. You must provide the path to the directory containing the hetero datasets, e.g. `--dataset-download-dir datasets/hetero/`.
 
 # Time and memory tracking
 

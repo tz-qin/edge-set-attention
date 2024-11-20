@@ -44,12 +44,12 @@ def convert_to_hf_format(pyg_data_list):
 
 def get_dataset_train_val_test_tokengt_3d(dataset_dir, target_name, ind_or_trans=None):
     hq_or_lq = None
-    if 'gw' in target_name:
+    if "gw" in target_name:
         train, val, test, num_classes, task_type, y_scaler = load_qm9_gw_hq_chemprop_3D_PyG(dataset_dir, target_name)
-        hq_or_lq = 'hq'
+        hq_or_lq = "hq"
     else:
         train, _, _, num_classes, task_type, y_scaler = load_qm9_dft_lq_chemprop_3D_PyG(dataset_dir, target_name, ind_or_trans)
-        hq_or_lq = 'lq'
+        hq_or_lq = "lq"
 
     preprocess_fn = preprocess_item_tokengt
     map_dict = dict(
@@ -71,12 +71,12 @@ def get_dataset_train_val_test_tokengt_3d(dataset_dir, target_name, ind_or_trans
             processed_items.append(processed_item)
 
         # Convert list of processed items back into batch format
-        keys_to_include = ['edge_index', 'num_nodes', 'num_edges', 'y', 'z', 'pos', 'in_degree', 'out_degree', 'lap_eigvec', 'lap_eigval', 'labels']
+        keys_to_include = ["edge_index", "num_nodes", "num_edges", "y", "z", "pos", "in_degree", "out_degree", "lap_eigvec", "lap_eigval", "labels"]
         batch = {key: [processed_item[key] for processed_item in processed_items] for key in keys_to_include}
 
         return batch
 
-    if hq_or_lq == 'hq':
+    if hq_or_lq == "hq":
         train_hf = convert_to_hf_format(train)
         val_hf = convert_to_hf_format(val)
         test_hf = convert_to_hf_format(test)

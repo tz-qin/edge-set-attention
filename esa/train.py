@@ -174,6 +174,9 @@ def main():
     if dataset in ["ESOL", "FreeSolv", "Lipo", "QM9", "DOCKSTRING", "ZINC", "PCQM4Mv2", "lrgb-pept-struct"]:
         assert regr_fn is not None, "A loss functions must be specified for regression tasks!"
 
+    if dataset in ["QM9", "DOCKSTRING"]:
+        assert target_name is not None, "A target must be specified for QM9 and DOCKSTRING!"
+
     ############## Data loading ##############
     train_mask, val_mask, test_mask = None, None, None
 

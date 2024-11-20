@@ -19,7 +19,7 @@ if is_cython_available():
 
 
 def check_is_node_level_dataset(dataset_name):
-    if dataset_name in ["PPI", 'Cora', 'CiteSeer']:
+    if dataset_name in ["PPI", "Cora", "CiteSeer"]:
         return True
     elif "infected" in dataset_name:
         return True
@@ -30,7 +30,7 @@ def check_is_node_level_dataset(dataset_name):
 
 
 def run_floyd_warshall(dataset, num_nodes, split):
-    print(f'Initial run of Floyd-Warshall on {split}...')
+    print(f"Initial run of Floyd-Warshall on {split}...")
 
     distances = []
     for item in tqdm(dataset):
@@ -97,7 +97,7 @@ def dataset_to_safetensors(ds, preprocess_fn, safetensors_dir, split, max_nodes,
     all_files = os.listdir(safetensors_dir)
     all_files = set([os.path.join(safetensors_dir, fpath) for fpath in all_files])
 
-    print(f'Pre-processing {split} files for Graphormer...')
+    print(f"Pre-processing {split} files for Graphormer...")
     for i in tqdm(range(len(ds))):
         file_out_path = os.path.join(safetensors_dir, f"{split}_safetensors_file_{i}_of_{len(ds)}.sft")
 
@@ -125,7 +125,7 @@ def get_dataset_train_val_test_graphormer(dataset, dataset_dir, **kwargs):
     model_arch = "graphormer"
     target_name = kwargs["target_name"]
 
-    safetensors_dir = os.path.join(dataset_dir, f'{dataset}_{target_name}_safetensors_cache')
+    safetensors_dir = os.path.join(dataset_dir, f"{dataset}_{target_name}_safetensors_cache")
     Path(safetensors_dir).mkdir(exist_ok=True, parents=True)
 
     max_nodes = train[0].max_node_global
@@ -135,15 +135,15 @@ def get_dataset_train_val_test_graphormer(dataset, dataset_dir, **kwargs):
     test_hf = convert_to_hf_format(test, dataset)
 
     if model_arch == "graphormer":
-        train_result_path = os.path.join(dataset_dir, f'train_{dataset}_{target_name}_Floyd_Warshall_max_dist.npy')
+        train_result_path = os.path.join(dataset_dir, f"train_{dataset}_{target_name}_Floyd_Warshall_max_dist.npy")
         if os.path.isfile(train_result_path):
             train_max_dist = np.load(train_result_path)
         else:
             train_max_dist = run_floyd_warshall(train_hf, max_nodes, "train")
             np.save(train_result_path, train_max_dist)
 
-        val_result_path = os.path.join(dataset_dir, f'val_{dataset}_{target_name}_Floyd_Warshall_max_dist.npy')
-        test_result_path = os.path.join(dataset_dir, f'test_{dataset}_{target_name}_Floyd_Warshall_max_dist.npy')
+        val_result_path = os.path.join(dataset_dir, f"val_{dataset}_{target_name}_Floyd_Warshall_max_dist.npy")
+        test_result_path = os.path.join(dataset_dir, f"test_{dataset}_{target_name}_Floyd_Warshall_max_dist.npy")
 
         if os.path.isfile(val_result_path):
             val_max_dist = np.load(val_result_path)
@@ -161,7 +161,7 @@ def get_dataset_train_val_test_graphormer(dataset, dataset_dir, **kwargs):
     else:
         overall_max_dist = None
 
-    print('Max distance found = ', overall_max_dist)
+    print("Max distance found = ", overall_max_dist)
 
     preprocess_fn = preprocess_item_graphormer
     train_dataset_proc = dataset_to_safetensors(train_hf, preprocess_fn, safetensors_dir, "train", max_nodes, overall_max_dist, is_node_task=is_node_task)

@@ -125,8 +125,8 @@ def main():
 
     # Transfer learning
     hq_or_lq = argsdict["transfer_learning_hq_or_lq"]
-    ind_or_trans = argsdict['transfer_learning_inductive_or_transductive']
-    retrain_lq_to_hq = argsdict['transfer_learning_retrain_lq_to_hq'] == "yes"
+    ind_or_trans = argsdict["transfer_learning_inductive_or_transductive"]
+    retrain_lq_to_hq = argsdict["transfer_learning_retrain_lq_to_hq"] == "yes"
 
     is_transfer_learing_lq = False
     assert hq_or_lq in ["hq", "lq"]
@@ -160,8 +160,8 @@ def main():
     pma_residual_dropout = argsdict["pma_residual_dropout"]
     use_mlp_ln = argsdict["use_mlp_ln"] == "yes"
 
-    if monitor_loss_name == 'MCC' or 'MCC' in monitor_loss_name:
-        monitor_loss_name = 'Validation MCC'
+    if monitor_loss_name == "MCC" or "MCC" in monitor_loss_name:
+        monitor_loss_name = "Validation MCC"
         
     ############## Data loading ##############
     if hq_or_lq == "hq":

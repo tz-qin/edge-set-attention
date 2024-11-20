@@ -97,7 +97,6 @@ def main():
     dataset_download_dir = argsdict["dataset_download_dir"]
     dataset_one_hot = argsdict["dataset_one_hot"]
     target_name = argsdict["dataset_target_name"]
-    train_regime = argsdict["train_regime"]
 
     # Learning hyperparameters
     batch_size = argsdict["batch_size"]
@@ -110,12 +109,16 @@ def main():
     ckpt_path = argsdict["ckpt_path"]
     out_path = argsdict["out_path"]
     wandb_project_name = argsdict["wandb_project_name"]
+    train_regime = argsdict["train_regime"]
 
     if monitor_loss_name == "MCC" or "MCC" in monitor_loss_name:
         monitor_loss_name = "Validation MCC"
 
     if dataset in ["ESOL", "FreeSolv", "Lipo", "QM9", "DOCKSTRING", "ZINC", "PCQM4Mv2", "lrgb-pept-struct"]:
         assert regr_fn is not None, "A loss functions must be specified for regression tasks!"
+
+    if dataset in ["QM9", "DOCKSTRING"]:
+        assert target_name is not None, "A target must be specified for QM9 and DOCKSTRING!"
 
     ############## Data loading ##############
     train_mask, val_mask, test_mask = None, None, None

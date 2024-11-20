@@ -240,7 +240,7 @@ class EdgeIndexDataset(FairseqDataset):
 
     @lru_cache(maxsize=16)
     def __getitem__(self, index):
-        return self.dataset[index]['edge_index']
+        return self.dataset[index]["edge_index"]
 
     def __len__(self):
         return len(self.dataset)
@@ -267,7 +267,7 @@ class BatchMappingDataset(FairseqDataset):
 
     @lru_cache(maxsize=16)
     def __getitem__(self, index):
-        return self.dataset[index]['edge_index']
+        return self.dataset[index]["edge_index"]
 
     def __len__(self):
         return len(self.dataset)

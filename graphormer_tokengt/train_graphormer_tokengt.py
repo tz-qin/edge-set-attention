@@ -101,6 +101,9 @@ def main():
     if args.dataset_name in ["ESOL", "FreeSolv", "Lipo", "QM9", "DOCKSTRING", "ZINC", "PCQM4Mv2", "lrgb-pept-struct"]:
         assert args.regression_loss_fn is not None, "A loss functions must be specified for regression tasks!"
 
+    if args.dataset_name in ["QM9", "DOCKSTRING"]:
+        assert args.dataset_target_name is not None, "A target must be specified for QM9 and DOCKSTRING!"
+
     if args.architecture == "graphormer":
         get_dataset_splits = get_dataset_train_val_test_graphormer
     elif args.architecture == "tokengt":

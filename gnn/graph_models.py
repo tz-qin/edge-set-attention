@@ -791,7 +791,7 @@ class Estimator(pl.LightningModule):
         else:
             opt = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=self.optimiser_weight_decay)
 
-        self.monitor_loss_name = 'Validation MCC' if 'MCC' in self.monitor_loss_name or self.monitor_loss_name == 'MCC' else self.monitor_loss_name
+        self.monitor_loss_name = "Validation MCC" if "MCC" in self.monitor_loss_name or self.monitor_loss_name == "MCC" else self.monitor_loss_name
         mode = "max" if "MCC" in self.monitor_loss_name else "min"
 
         opt_dict = {
@@ -826,15 +826,15 @@ class Estimator(pl.LightningModule):
             predictions = predictions.squeeze().float()
             y = y.squeeze().long()
 
-            if step_type == 'train' and self.train_mask is not None:
+            if step_type == "train" and self.train_mask is not None:
                 predictions = predictions[self.train_mask]
                 y = y[self.train_mask]
             
-            if step_type == 'validation' and self.val_mask is not None:
+            if step_type == "validation" and self.val_mask is not None:
                 predictions = predictions[self.val_mask]
                 y = y[self.val_mask]
 
-            if step_type == 'test' and self.test_mask is not None:
+            if step_type == "test" and self.test_mask is not None:
                 predictions = predictions[self.test_mask]
                 y = y[self.test_mask]
 

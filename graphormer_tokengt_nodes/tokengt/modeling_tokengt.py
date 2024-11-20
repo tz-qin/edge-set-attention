@@ -1256,13 +1256,13 @@ class TokenGTForNodeClassification(TokenGTPreTrainedModel):
         node_outputs = outputs[padded_node_mask]
         logits = self.decoder(node_outputs)
 
-        if phase == 'train':
+        if phase == "train":
             logits_masked = logits.squeeze()[self.train_mask].float()
             labels_masked = labels.squeeze()[self.train_mask].long()
-        elif phase == 'validation':
+        elif phase == "validation":
             logits_masked = logits.squeeze()[self.val_mask].float()
             labels_masked = labels.squeeze()[self.val_mask].long()
-        elif phase == 'test':
+        elif phase == "test":
             logits_masked = logits.squeeze()[self.test_mask].float()
             labels_masked = labels.squeeze()[self.test_mask].long()
         else:

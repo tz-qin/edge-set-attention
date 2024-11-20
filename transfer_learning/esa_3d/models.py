@@ -23,10 +23,10 @@ from esa.masked_layers import ESA
 from esa.mlp_utils import SmallMLP
 
 
-pept_struct_target_names = ['Inertia_mass_a', 'Inertia_mass_b', 'Inertia_mass_c',
-                        'Inertia_valence_a', 'Inertia_valence_b',
-                        'Inertia_valence_c', 'length_a', 'length_b', 'length_c',
-                        'Spherocity', 'Plane_best_fit']
+pept_struct_target_names = ["Inertia_mass_a", "Inertia_mass_b", "Inertia_mass_c",
+                        "Inertia_valence_a", "Inertia_valence_b",
+                        "Inertia_valence_c", "length_a", "length_b", "length_c",
+                        "Spherocity", "Plane_best_fit"]
 
 
 def nearest_multiple_of_8(n):
@@ -181,7 +181,7 @@ class Estimator(pl.LightningModule):
 
         self.st_fast = ESA(**st_args)
 
-        if self.mlp_type in ['standard', 'swiglu', "spatial_gmlp", "gated_mlp"]:
+        if self.mlp_type in ["standard", "swiglu", "spatial_gmlp", "gated_mlp"]:
             self.output_mlp = SmallMLP(
                 in_dim=self.graph_dim,
                 inter_dim=128,
@@ -193,7 +193,7 @@ class Estimator(pl.LightningModule):
 
         # Uncomment if you want the gated MLP here
             
-        # elif self.mlp_type == 'gated_mlp':
+        # elif self.mlp_type == "gated_mlp":
         #     self.output_mlp = GatedMLPMulti(
         #         in_dim=self.graph_dim,
         #         out_dim=self.linear_output_size,
@@ -281,7 +281,7 @@ class Estimator(pl.LightningModule):
         opt = bnb.optim.AdamW8bit(self.parameters(), lr=self.lr, weight_decay=self.optimiser_weight_decay)
         mode = "max" if "MCC" in self.monitor_loss_name else "min"
 
-        self.monitor_loss_name = 'Validation MCC' if 'MCC' in self.monitor_loss_name or self.monitor_loss_name == 'MCC' else self.monitor_loss_name
+        self.monitor_loss_name = "Validation MCC" if "MCC" in self.monitor_loss_name or self.monitor_loss_name == "MCC" else self.monitor_loss_name
 
         opt_dict = {
             "optimizer": opt,

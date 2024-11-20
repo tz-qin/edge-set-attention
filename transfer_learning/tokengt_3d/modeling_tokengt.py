@@ -1166,7 +1166,6 @@ class TokenGTForGraphClassification(TokenGTPreTrainedModel):
         }
         outputs = self.encoder(batched_data)
         head_outputs = self.decoder(outputs)
-        # print('head_outputs shape = ', head_outputs.shape)
         logits = head_outputs[:, 0, :].contiguous()  # graph token
 
 
@@ -1181,10 +1180,8 @@ class TokenGTForGraphClassification(TokenGTPreTrainedModel):
 
             if self.problem_type == "regression":
                 if self.decoder.num_classes == 1:
-                    # print('regression SINGLE path')
                     loss = loss_fct(logits.squeeze().float(), labels.squeeze().float())
                 else:
-                    # print('regression MULTI path')
                     loss = loss_fct(logits.squeeze().view(-1, self.decoder.num_classes), labels.squeeze().float().view(-1, self.decoder.num_classes))
 
             if "classification" in self.problem_type:

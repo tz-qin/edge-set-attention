@@ -8,9 +8,9 @@ from data_loading.data_loading import apply_scaler, scale_y_for_regression_task,
 
 
 def load_qm9_gw_hq_chemprop_3D_PyG(dataset_dir, target_name):
-    train = torch.load(os.path.join(dataset_dir, 'train_with_edge_index.pt'))
-    val = torch.load(os.path.join(dataset_dir, 'val_with_edge_index.pt'))
-    test = torch.load(os.path.join(dataset_dir, 'test_with_edge_index.pt'))
+    train = torch.load(os.path.join(dataset_dir, "train_with_edge_index.pt"))
+    val = torch.load(os.path.join(dataset_dir, "val_with_edge_index.pt"))
+    test = torch.load(os.path.join(dataset_dir, "test_with_edge_index.pt"))
    
     print("Selecting target...")
     target_transform = TargetToY(target_name)
@@ -50,10 +50,10 @@ def load_qm9_gw_hq_chemprop_3D_PyG(dataset_dir, target_name):
 
 
 def load_qm9_dft_lq_chemprop_3D_PyG(dataset_dir, target_name, ind_or_trans):
-    if ind_or_trans == 'inductive':
-        train = torch.load(os.path.join(dataset_dir, 'inductive_full_with_edge_index.pt'))
+    if ind_or_trans == "inductive":
+        train = torch.load(os.path.join(dataset_dir, "inductive_full_with_edge_index.pt"))
     else:
-        train = torch.load(os.path.join(dataset_dir, 'transductive_full_with_edge_index.pt'))
+        train = torch.load(os.path.join(dataset_dir, "transductive_full_with_edge_index.pt"))
 
     print("Selecting target...")
     target_transform = TargetToY(target_name)
