@@ -23,7 +23,7 @@ We provide code for three main types of tasks:
 Most datasets used in this work can be downloaded through PyTorch Geometric (PyG). For those that are not available in PyG, we include links to access them, namely:
 
 - DOCKSTRING
-- QM9 accurate GW frontier orbital energies with 3D coordinates (for transfer learning)
+- QM9 with accurate GW/DFT frontier orbital energies and with 3D coordinates (for transfer learning)
 - Shortest path datasets (infected) - these can be generated through PyG using the commands given in the SI of the paper. However, we provide them for convenience.
 - Heterophily datasets (`roman empire`, `amazon ratings`, `minesweeper`, `tolokers`, `squirrel_filtered`, `chameleon_filtered`)
 
@@ -180,7 +180,7 @@ Note that Graphormer and TokenGT are only available for tasks where the node/edg
 
 GraphGPS is best run through configuration files (.yaml). We have adapted the GraphGPS code base and plugged in our data loading pipeline to ensure a fair comparison.
 
-The notebook `generate_scripts_graphgps_graph.ipynb` provides an automated approach to generating configuration files and runnable scripts for graph-level tasks using GraphGPS.
+The notebook `helper/notebooks_graphgps/generate_scripts_graphgps_graph.ipynb` provides an automated approach to generating configuration files and runnable scripts for graph-level tasks using GraphGPS.
 
 # Node-level tasks
 
@@ -221,7 +221,7 @@ Note that we are using `python -m graphormer_tokengt_nodes.train_graphormer_toke
 
 GraphGPS is best run through configuration files (.yaml). We have adapted the GraphGPS code base and plugged in our data loading pipeline to ensure a fair comparison. The adaptation to node-level tasks required further modifications to ensure compatibility with our data loading.
 
-The notebook `generate_scripts_graphgps_node.ipynb` provides an automated approach to generating configuration files and runnable scripts for graph-level tasks using GraphGPS.
+The notebook `helper/notebooks_graphgps/generate_scripts_graphgps_node.ipynb` provides an automated approach to generating configuration files and runnable scripts for node-level tasks using GraphGPS.
 
 ## Transfer learning (3D)
 
@@ -288,6 +288,14 @@ Note that some training arguments are specific to Graphormer 3D. These are expla
 We have adapted the huggingface TokenGT implementation for 3D data and transfer learning. The interface is identical to graph-level TokenGT, with the addition of the transfer learning options:
 
 ```python -m transfer_learning.tokengt_3d.train --dataset_download_dir <DS_DIR> --dataset_target_name homo_gw --batch_size 128 --out_dir <OUT_DIR> --name <WANDB_RUN_NAME> --wandb_project_name <WANDB_PROJ> --early_stop_patience 30 --embedding_dim 512 --hidden_size 512 --num_layers 8 --num_attention_heads 8 --gradient-clip-val 0.5 --optimiser-weight-decay 1e-10 --lr 0.0001 --seed 0 --bfloat16 yes --regression_loss_fn mae --transfer_learning_hq_or_lq hq --transfer_learning_inductive_or_transductive inductive --transfer_learning_retrain_lq_to_hq --ckpt_path <CKPT_PATH>```
+
+
+## GraphGPS
+
+GraphGPS is best run through configuration files (.yaml). We have adapted the GraphGPS code base and plugged in our data loading pipeline to ensure a fair comparison. We have further adapted the original code to support the same transfer learning protocols as for all the other methods, with specific configuration file arguments.
+
+The notebook `helper/notebooks_graphgps/generate_scripts_graphgps_transfer_learning.ipynb` provides an automated approach to generating configuration files and runnable scripts for transfer learning tasks using GraphGPS.
+
 
 ## OCP (3D)
 
@@ -413,7 +421,7 @@ np.save(os.path.join(args.out_dir, 'train_time.npy'), time_elapsed_train)
 
 The code requires the following libraries to be installed: PyTorch, PyTorch Lightning, PyTorch Geometric, xformers, flash_attn (including the `fused_dense_lib` subcomponents), transformers, datasets, accelerate, bitsandbytes, wandb, Cython, ogb, admin-torch, and the LRGB dependencies from the official repository if LRGB tasks are desired. The code requires an NVIDIA GPU to run, preferably Ampere-class or newer.  
 
-An example conda environment file `conda_envs/env.yaml` is provided as an example of the required packages and to help with installation.
+An example conda environment file `helper/conda_envs/env.yaml` is provided as an example of the required packages and to help with installation.
 
 Efficient attention implementations are improving rapidly and we recommend installing the latest versions. At the time of writing, these are:
 
@@ -447,6 +455,6 @@ Efficient attention implementations are improving rapidly and we recommend insta
 
 ## Fairseq
 
-Training on OCP requires the package `fairseq` to be installed. Unfortunately, Graphormer 3D uses the first version of `fairseq`, not `fairseq2`. The binaries of the old `fairseq` are not compatible with the latest versions of Python, PyTorch, and CUDA. Thus, the packages must be manually built from source which takes significant time and effort. Two versions of a `fairseq` environment export from `conda` were attached in an attempt to help reproduce our environment. The file `conda_envs/fairseq_env.yaml` corresponds to a simple export, while the file `conda_envs/fairseq_from_history_env.yaml` used the additional option `--from-history`.
+Training on OCP requires the package `fairseq` to be installed. Unfortunately, Graphormer 3D uses the first version of `fairseq`, not `fairseq2`. The binaries of the old `fairseq` are not compatible with the latest versions of Python, PyTorch, and CUDA. Thus, the packages must be manually built from source which takes significant time and effort. Two versions of a `fairseq` environment export from `conda` were attached in an attempt to help reproduce our environment. The file `helper/conda_envs/fairseq_env.yaml` corresponds to a simple export, while the file `helper/conda_envs/fairseq_from_history_env.yaml` used the additional option `--from-history`.
 
 **IMPORTANT**: The `.yaml` files are anonymised and you must replace the placeholder `<NAME>` and `<PREFIX>` if you want to use them directly.
