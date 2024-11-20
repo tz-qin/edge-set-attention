@@ -37,7 +37,7 @@ torch.backends.cudnn.allow_tf32 = True
 
 
 def check_is_node_level_dataset(dataset_name):
-    if dataset_name in ["PPI", 'Cora', 'CiteSeer']:
+    if dataset_name in ["PPI", "Cora", "CiteSeer"]:
         return True
     elif "infected" in dataset_name:
         return True
@@ -108,7 +108,6 @@ def main():
     parser.add_argument("--config-json-path", type=str)
     parser.add_argument("--wandb-project-name", type=str)
     
-    
 
     args = parser.parse_args()
 
@@ -135,6 +134,7 @@ def main():
     use_bfloat16 = argsdict["use_bfloat16"]
     apply_attention_on = argsdict["apply_attention_on"]
     mlp_dropout = argsdict["mlp_dropout"]
+    regr_fn = argsdict["regression_loss_fn"]
 
     # # 3D OCP settings
     num_kernels = argsdict["ocp_num_kernels"]
@@ -152,15 +152,15 @@ def main():
     pma_residual_dropout = argsdict["pma_residual_dropout"]
     use_mlp_ln = argsdict["use_mlp_ln"] == "yes"
 
-    if monitor_loss_name == 'MCC' or 'MCC' in monitor_loss_name:
-        monitor_loss_name = 'Validation MCC'
+    if monitor_loss_name == "MCC" or "MCC" in monitor_loss_name:
+        monitor_loss_name = "Validation MCC"
 
     if argsdict["pos_enc"]:
-        posenc = argsdict["pos_enc"].split('+')
+        posenc = argsdict["pos_enc"].split("+")
     else:
         posenc = []
 
-    print(f'Using {posenc} PE!')
+    print(f"Using {posenc} PE!")
         
     if check_is_node_level_dataset(dataset):
         assert "P" not in argsdict["layer_types"]
@@ -171,6 +171,8 @@ def main():
     if dataset == "ocp":
         assert apply_attention_on == "node", "ESA is not currently supported for OCP!"
         
+    if dataset in ["ESOL", "FreeSolv", "Lipo", "QM9", "DOCKSTRING", "ZINC", "PCQM4Mv2", "lrgb-pept-struct"]:
+        assert regr_fn is not None, "A loss functions must be specified for regression tasks!"
 
     ############## Data loading ##############
     train_mask, val_mask, test_mask = None, None, None

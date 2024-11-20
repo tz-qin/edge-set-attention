@@ -509,16 +509,16 @@ def load_dockstring_chemprop(dataset_dir, one_hot, target_name, **kwargs):
     else:
         posenc_name = "None"
 
-    preprocessed_path_train = os.path.join(dataset_dir, f'/DOCKSTRING_train_{target_name}_{posenc_name}.pt')
-    preprocessed_path_val = os.path.join(dataset_dir, f'DOCKSTRING_val_{target_name}_{posenc_name}.pt')
-    preprocessed_path_test = os.path.join(dataset_dir, f'DOCKSTRING_test_{target_name}_{posenc_name}.pt')
+    preprocessed_path_train = os.path.join(dataset_dir, f"/DOCKSTRING_train_{target_name}_{posenc_name}.pt")
+    preprocessed_path_val = os.path.join(dataset_dir, f"DOCKSTRING_val_{target_name}_{posenc_name}.pt")
+    preprocessed_path_test = os.path.join(dataset_dir, f"DOCKSTRING_test_{target_name}_{posenc_name}.pt")
 
     if os.path.isfile(preprocessed_path_train):
-        print('Loading pre-processed train, val, test...')
+        print("Loading pre-processed train, val, test...")
         train = torch.load(preprocessed_path_train)
         val = torch.load(preprocessed_path_val)
         test = torch.load(preprocessed_path_test)
-        print('Loaded pre-processed splits!')
+        print("Loaded pre-processed splits!")
     else:
         def csv_to_pyg_data(df):
             dataset_as_data_list = []
@@ -531,7 +531,7 @@ def load_dockstring_chemprop(dataset_dir, one_hot, target_name, **kwargs):
 
             return dataset_as_data_list
 
-        print('Pre-processed data unavailable, computing...')
+        print("Pre-processed data unavailable, computing...")
         train = pd.read_csv(os.path.join(dataset_dir, "train.csv"))
         val = pd.read_csv(os.path.join(dataset_dir, "val.csv"))
         test = pd.read_csv(os.path.join(dataset_dir, "test.csv"))
@@ -556,11 +556,11 @@ def load_dockstring_chemprop(dataset_dir, one_hot, target_name, **kwargs):
         val = [transforms(data) for data in tqdm(val) if data is not None]
         test = [transforms(data) for data in tqdm(test) if data is not None]
 
-        print('Caching pre-processed files...')
+        print("Caching pre-processed files...")
         torch.save(train, preprocessed_path_train)
         torch.save(val, preprocessed_path_val)
         torch.save(test, preprocessed_path_test)
-        print('Caching done')
+        print("Caching done")
 
     print("Determining global node/edge counts...")
     max_edge_global_train, max_node_global_train = get_max_node_edge_global(train)
@@ -836,9 +836,9 @@ def load_pcqm(download_dir, **kwargs):
 
 
 def load_ppi(download_dir, **kwards):
-    train = torch_geometric.datasets.PPI(root=download_dir, split='train', pre_transform=T.Compose([AddMaxEdge(), AddMaxNode()]))
-    val = torch_geometric.datasets.PPI(root=download_dir, split='val', pre_transform=T.Compose([AddMaxEdge(), AddMaxNode()]))
-    test = torch_geometric.datasets.PPI(root=download_dir, split='test', pre_transform=T.Compose([AddMaxEdge(), AddMaxNode()]))
+    train = torch_geometric.datasets.PPI(root=download_dir, split="train", pre_transform=T.Compose([AddMaxEdge(), AddMaxNode()]))
+    val = torch_geometric.datasets.PPI(root=download_dir, split="val", pre_transform=T.Compose([AddMaxEdge(), AddMaxNode()]))
+    test = torch_geometric.datasets.PPI(root=download_dir, split="test", pre_transform=T.Compose([AddMaxEdge(), AddMaxNode()]))
 
     print("\nDataset items look like: ", train[0])
 
@@ -927,10 +927,10 @@ def load_planetoid(dataset, download_dir, **kwargs):
 
 
 def load_infected(dataset, dataset_dir, **kwargs):
-    if dataset == 'infected+15000':
-        dataset = torch.load(os.path.join(dataset_dir, 'ER+numn=15000+edge_p=0.00009+num_inf=40+max_p=20.pt'))
-    elif dataset == 'infected+30000':
-        dataset = torch.load(os.path.join(dataset_dir,'ER+numn=30000+edge_p=0.00005+num_inf=20+max_p=20.pt'))
+    if dataset == "infected+15000":
+        dataset = torch.load(os.path.join(dataset_dir, "ER+numn=15000+edge_p=0.00009+num_inf=40+max_p=20.pt"))
+    elif dataset == "infected+30000":
+        dataset = torch.load(os.path.join(dataset_dir,"ER+numn=30000+edge_p=0.00005+num_inf=20+max_p=20.pt"))
 
     pre_transform = T.Compose([AddMaxEdge(), AddMaxNode()])
     data = pre_transform(dataset[0])
@@ -984,21 +984,21 @@ def load_infected(dataset, dataset_dir, **kwargs):
 
 
 def load_heterophilic(dataset, dataset_dir, **kwargs):
-    hetero_name = dataset.split('+')[-1]
+    hetero_name = dataset.split("+")[-1]
     # Originally from https://github.com/yandex-research/heterophilous-graphs
-    dataset = torch.load(os.path.join(dataset_dir, f'{hetero_name}.pt'))
+    dataset = torch.load(os.path.join(dataset_dir, f"{hetero_name}.pt"))
 
-    data = dataset['data']
+    data = dataset["data"]
     pre_transform = T.Compose([AddMaxEdge(), AddMaxNode()])
     data = pre_transform(data)
 
-    num_classes = dataset['num_classes']
-    num_tasks = dataset['num_classes']
+    num_classes = dataset["num_classes"]
+    num_tasks = dataset["num_classes"]
     task_type = "multi_classification"
 
-    train_mask = dataset['train_masks'][0]
-    val_mask = dataset['val_masks'][0]
-    test_mask = dataset['test_masks'][0]
+    train_mask = dataset["train_masks"][0]
+    val_mask = dataset["val_masks"][0]
+    test_mask = dataset["test_masks"][0]
 
     data.train_mask = train_mask
     data.val_mask = val_mask
@@ -1060,7 +1060,7 @@ def get_dataset_train_val_test(dataset, dataset_dir, **kwargs):
         return load_lrgb_pept_struct(dataset_dir, **kwargs)
     elif dataset == "ZINC":
         return load_zinc_benchmark(dataset, dataset_dir, **kwargs)
-    elif dataset == 'PCQM4Mv2':
+    elif dataset == "PCQM4Mv2":
         return load_pcqm(dataset_dir, **kwargs)
     elif dataset == "PPI":
         return load_ppi(dataset_dir, **kwargs)

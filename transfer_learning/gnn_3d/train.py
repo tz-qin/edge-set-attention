@@ -113,6 +113,9 @@ def main():
     early_stopping_patience = argsdict["early_stopping_patience"]
     gradient_clip_val = argsdict["gradient_clip_val"]
     monitor_loss_name = argsdict["monitor_loss_name"]
+    regr_fn = argsdict["regression_loss_fn"]
+
+    assert regr_fn is not None, "A loss functions must be specified for regression tasks!"
 
     # Path/config arguments
     ckpt_path = argsdict["ckpt_path"]

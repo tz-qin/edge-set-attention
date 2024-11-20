@@ -98,9 +98,12 @@ def main():
     use_bfloat16 = args.bfloat16 == "yes"
     ckpt_path = args.ckpt_path
 
-    if args.architecture == 'graphormer':
+    if args.dataset_name in ["ESOL", "FreeSolv", "Lipo", "QM9", "DOCKSTRING", "ZINC", "PCQM4Mv2", "lrgb-pept-struct"]:
+        assert args.regression_loss_fn is not None, "A loss functions must be specified for regression tasks!"
+
+    if args.architecture == "graphormer":
         get_dataset_splits = get_dataset_train_val_test_graphormer
-    elif args.architecture == 'tokengt':
+    elif args.architecture == "tokengt":
         get_dataset_splits = get_dataset_train_val_test_tokengt
 
     train, val, test, num_classes, task_type, scaler, _, _, _ = get_dataset_splits(
@@ -258,10 +261,10 @@ def main():
     logs_dir = os.path.join(args.out_dir, "logs")
     Path(logs_dir).mkdir(exist_ok=True, parents=True)
 
-    if 'struct' in args.dataset_name:
+    if "struct" in args.dataset_name:
         metric_for_best_model = "Average_MAE"
         greater_is_better = False
-    elif 'fn' in args.dataset_name:
+    elif "fn" in args.dataset_name:
         metric_for_best_model = "AP"
         greater_is_better = True
     else:
@@ -410,7 +413,7 @@ def main():
     np.save(true_path, results.label_ids)
     np.save(metrics_path, test_metrics)
 
-    print('test_metrics = ', test_metrics)
+    print("test_metrics = ", test_metrics)
 
 
 if __name__ == "__main__":

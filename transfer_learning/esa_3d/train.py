@@ -121,6 +121,7 @@ def main():
     use_bfloat16 = argsdict["use_bfloat16"]
     apply_attention_on = argsdict["apply_attention_on"]
     mlp_dropout = argsdict["mlp_dropout"]
+    regr_fn = argsdict["regression_loss_fn"]
 
     # Transfer learning
     hq_or_lq = argsdict["transfer_learning_hq_or_lq"]
@@ -140,6 +141,8 @@ def main():
     if retrain_lq_to_hq:
         assert argsdict["ckpt_path"] is not None, "Must specify a trained LQ model checkpoint path!"
         assert "gw" in target_name, "Fine-tuning must be done on one of the GW targets!"
+
+    assert regr_fn is not None, "A loss functions must be specified for regression tasks!"
 
     # # 3D OCP settings
     num_kernels = argsdict["ocp_num_kernels"]

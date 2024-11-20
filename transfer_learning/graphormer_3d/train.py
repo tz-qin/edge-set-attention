@@ -88,6 +88,7 @@ def main():
     early_stopping_patience = argsdict["early_stopping_patience"]
     gradient_clip_val = argsdict["gradient_clip_val"]
     monitor_loss_name = argsdict["monitor_loss_name"]
+    regr_fn = argsdict["regression_loss_fn"]
 
     # Graphormer arguments
     blocks = argsdict["blocks"]
@@ -122,6 +123,8 @@ def main():
     if retrain_lq_to_hq:
         assert argsdict["ckpt_path"] is not None, "Must specify a trained LQ model checkpoint path!"
         assert "gw" in target_name, "Fine-tuning must be done on one of the GW targets!"
+
+    assert regr_fn is not None, "A loss functions must be specified for regression tasks!"
 
     # Path/config arguments
     ckpt_path = argsdict["ckpt_path"]

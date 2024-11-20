@@ -43,7 +43,7 @@ The same applies for the dataset `PCQM4Mv2`, where the test sets are not publicl
 
 The general template for starting ESA training looks like the following example:
 
-```python -m esa.train --dataset <DS> --dataset-download-dir <DL_DIR> --dataset-one-hot --dataset-target-name None --lr 0.0001 --batch-size 128 --norm-type LN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 512 --apply-attention-on edge --use-mlps --mlp-hidden-size 512 --out-path <OUT_DIR> --wandb-project-name <WANDB_PROJ> --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type gated_mlp --use-bfloat16 --layer-types M M S P --pre-or-post post --hidden-dims 256 256 256 256 --num-heads 4 4 4 4 --mlp-dropout 0 --mlp-layers 2 --mlp-hidden-size 512```
+```python -m esa.train --dataset <DS> --dataset-download-dir <DS_DIR> --dataset-one-hot --dataset-target-name None --lr 0.0001 --batch-size 128 --norm-type LN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 512 --apply-attention-on edge --use-mlps --mlp-hidden-size 512 --out-path <OUT_DIR> --wandb-project-name <WANDB_PROJ> --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type gated_mlp --use-bfloat16 --layer-types M M S P --pre-or-post post --hidden-dims 256 256 256 256 --num-heads 4 4 4 4 --mlp-dropout 0 --mlp-layers 2 --mlp-hidden-size 512```
 
 Some arguments control general training parameters that are shared with other models, such as `--lr`, `--batch-size`, `--optimiser-weight-decay`, `--gradient-clip-val 0.5`. The setting `--monitor-loss-name` provides the name of the loss to track for early stopping (`val_loss/dataloader_idx_0` for validation loss, `train_loss` for the training loss).
 
@@ -136,7 +136,7 @@ Make sure that the code that disables "unused" columns in `trainer.py` is disabl
 
 The GNN code can be run using a command like the following:
 
-```python -m gnn.train --dataset <DS> --dataset-download-dir <DL_DIR> --dataset-target-name None --dataset-one-hot --output-node-dim 128 --num-layers 4 --conv-type GCN --gnn-intermediate-dim 512 --batch-size 128 --lr 0.0001 --monitor-loss-name val_loss/dataloader_idx_0 --early-stopping-patience 30 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJ> --seed 0 --gradient-clip-val 0.5 --optimiser-weight-decay 1e-10 --train-regime gpu-bf16```
+```python -m gnn.train --dataset <DS> --dataset-download-dir <DS_DIR> --dataset-target-name None --dataset-one-hot --output-node-dim 128 --num-layers 4 --conv-type GCN --gnn-intermediate-dim 512 --batch-size 128 --lr 0.0001 --monitor-loss-name val_loss/dataloader_idx_0 --early-stopping-patience 30 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJ> --seed 0 --gradient-clip-val 0.5 --optimiser-weight-decay 1e-10 --train-regime gpu-bf16```
 
 Note that in addition to the general settings covered above, there are a few options specific to GNNs.
 
@@ -158,11 +158,11 @@ The Graphormer/TokenGT code can be run using a command like the following:
 
 **Graphormer**
 
-```python -m graphormer_tokengt.train_graphormer_tokengt --dataset_name <DS> --dataset_download_dir <DL_DIR> --no-dataset_one_hot --dataset_target_name None --batch_size 128 --out_dir <OUT_DIR> --name <WANDB_RUN_NAME> --<WANDB_PROJ> --architecture graphormer --early_stop_patience 30 --embedding_dim 512 --hidden_size 512 --num_layers 8 --num_attention_heads 8 --gradient_clip_val 0.5 --optimiser_weight_decay 1e-10 --lr 0.0001 --seed 0 --bfloat16 yes```
+```python -m graphormer_tokengt.train_graphormer_tokengt --dataset_name <DS> --dataset_download_dir <DS_DIR> --no-dataset_one_hot --dataset_target_name None --batch_size 128 --out_dir <OUT_DIR> --name <WANDB_RUN_NAME> --<WANDB_PROJ> --architecture graphormer --early_stop_patience 30 --embedding_dim 512 --hidden_size 512 --num_layers 8 --num_attention_heads 8 --gradient_clip_val 0.5 --optimiser_weight_decay 1e-10 --lr 0.0001 --seed 0 --bfloat16 yes```
 
 **TokenGT**
 
-```python -m graphormer_tokengt.train_graphormer_tokengt --dataset_name <DS> --dataset_download_dir <DL_DIR> --no-dataset_one_hot --dataset_target_name None --batch_size 128 --out_dir <OUT_DIR> --name <WANDB_RUN_NAME> --<WANDB_PROJ> --architecture tokengt --early_stop_patience 30 --embedding_dim 512 --hidden_size 512 --num_layers 8 --num_attention_heads 8 --gradient_clip_val 0.5 --optimiser_weight_decay 1e-10 --lr 0.0001 --seed 0 --bfloat16 yes```
+```python -m graphormer_tokengt.train_graphormer_tokengt --dataset_name <DS> --dataset_download_dir <DS_DIR> --no-dataset_one_hot --dataset_target_name None --batch_size 128 --out_dir <OUT_DIR> --name <WANDB_RUN_NAME> --<WANDB_PROJ> --architecture tokengt --early_stop_patience 30 --embedding_dim 512 --hidden_size 512 --num_layers 8 --num_attention_heads 8 --gradient_clip_val 0.5 --optimiser_weight_decay 1e-10 --lr 0.0001 --seed 0 --bfloat16 yes```
 
 The specific arguments for Graphormer and TokenGT are:
 
@@ -188,7 +188,7 @@ The notebook `generate_scripts_graphgps_graph.ipynb` provides an automated appro
 
 A typical command looks like:
 
-```python -m esa.train --dataset <DS> --dataset-download-dir <DL_DIR> --dataset-one-hot --dataset-target-name None --lr 0.0001 --batch-size 128 --norm-type LN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 512 --apply-attention-on node --use-mlps --mlp-hidden-size 512 --out-path <OUT_DIR> --wandb-project-name <WANDB_PROJ> --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type gated_mlp --use-bfloat16 --layer-types M M S --pre-or-post post --hidden-dims 256 256 256 --num-heads 4 4 4 --mlp-dropout 0 --mlp-layers 2 --mlp-hidden-size 512```
+```python -m esa.train --dataset <DS> --dataset-download-dir <DS_DIR> --dataset-one-hot --dataset-target-name None --lr 0.0001 --batch-size 128 --norm-type LN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 512 --apply-attention-on node --use-mlps --mlp-hidden-size 512 --out-path <OUT_DIR> --wandb-project-name <WANDB_PROJ> --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type gated_mlp --use-bfloat16 --layer-types M M S --pre-or-post post --hidden-dims 256 256 256 --num-heads 4 4 4 --mlp-dropout 0 --mlp-layers 2 --mlp-hidden-size 512```
 
 Note that there are only 2 important changes compared to graph-level tasks:
 
@@ -199,13 +199,13 @@ Note that there are only 2 important changes compared to graph-level tasks:
 
 The command format is identical and there are no changes required.
 
-```python -m gnn.train --dataset <DS> --dataset-download-dir <DL_DIR> --dataset-target-name None --dataset-one-hot --output-node-dim 128 --num-layers 4 --conv-type GCN --gnn-intermediate-dim 512 --batch-size 128 --lr 0.0001 --monitor-loss-name val_loss/dataloader_idx_0 --early-stopping-patience 30 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJ> --seed 0 --gradient-clip-val 0.5 --optimiser-weight-decay 1e-10 --train-regime gpu-bf16```
+```python -m gnn.train --dataset <DS> --dataset-download-dir <DS_DIR> --dataset-target-name None --dataset-one-hot --output-node-dim 128 --num-layers 4 --conv-type GCN --gnn-intermediate-dim 512 --batch-size 128 --lr 0.0001 --monitor-loss-name val_loss/dataloader_idx_0 --early-stopping-patience 30 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJ> --seed 0 --gradient-clip-val 0.5 --optimiser-weight-decay 1e-10 --train-regime gpu-bf16```
 
 ## Graphormer
 
 The arguments are the same, but the appropriate script must be called.
 
-```python -m graphormer_tokengt_nodes.train_graphormer_tokengt_nodes --dataset_name <DS> --dataset_download_dir <DL_DIR> --no-dataset_one_hot --dataset_target_name None --batch_size 128 --out_dir <OUT_DIR> --name <WANDB_RUN_NAME> --<WANDB_PROJ> --architecture graphormer --early_stop_patience 30 --embedding_dim 512 --hidden_size 512 --num_layers 8 --num_attention_heads 8 --gradient_cli_val 0.5 --optimiser_weight_decay 1e-10 --lr 0.0001 --seed 0 --bfloat16 yes```
+```python -m graphormer_tokengt_nodes.train_graphormer_tokengt_nodes --dataset_name <DS> --dataset_download_dir <DS_DIR> --no-dataset_one_hot --dataset_target_name None --batch_size 128 --out_dir <OUT_DIR> --name <WANDB_RUN_NAME> --<WANDB_PROJ> --architecture graphormer --early_stop_patience 30 --embedding_dim 512 --hidden_size 512 --num_layers 8 --num_attention_heads 8 --gradient_cli_val 0.5 --optimiser_weight_decay 1e-10 --lr 0.0001 --seed 0 --bfloat16 yes```
 
 Note that we are using `python -m graphormer_tokengt_nodes.train_graphormer_tokengt_nodes` instead of `python -m graphormer_tokengt.train_graphormer_tokengt`.
 
@@ -213,7 +213,7 @@ Note that we are using `python -m graphormer_tokengt_nodes.train_graphormer_toke
 
 The arguments are the same, but the appropriate script must be called.
 
-```python -m graphormer_tokengt_nodes.train_graphormer_tokengt_nodes --dataset_name <DS> --dataset_download_dir <DL_DIR> --no-dataset_one_hot --dataset_target_name None --batch_size 128 --out_dir <OUT_DIR> --name <WANDB_RUN_NAME> --<WANDB_PROJ> --architecture tokengt --early_stop_patience 30 --embedding_dim 512 --hidden_size 512 --num_layers 8 --num_attention_heads 8 --gradient_clip_val 0.5 --optimiser-weight-decay 1e-10 --lr 0.0001 --seed 0 --bfloat16 yes```
+```python -m graphormer_tokengt_nodes.train_graphormer_tokengt_nodes --dataset_name <DS> --dataset_download_dir <DS_DIR> --no-dataset_one_hot --dataset_target_name None --batch_size 128 --out_dir <OUT_DIR> --name <WANDB_RUN_NAME> --<WANDB_PROJ> --architecture tokengt --early_stop_patience 30 --embedding_dim 512 --hidden_size 512 --num_layers 8 --num_attention_heads 8 --gradient_clip_val 0.5 --optimiser-weight-decay 1e-10 --lr 0.0001 --seed 0 --bfloat16 yes```
 
 Note that we are using `python -m graphormer_tokengt_nodes.train_graphormer_tokengt_nodes` instead of `python -m graphormer_tokengt.train_graphormer_tokengt`.
 
@@ -303,19 +303,19 @@ Example commands for different datasets.
 
 ### QM9
 
-```python -m esa.train --dataset QM9 --dataset-download-dir <DL_DIR> --dataset-one-hot --dataset-target-name homo --lr 0.0001 --batch-size 128 --norm-type BN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 256 --apply-attention-on edge --use-mlps --mlp-hidden-size 256 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJECT> --hidden-dims 256 256 256 256 256 256 --num-heads 16 16 16 16 16 16 --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type standard --use-bfloat16 --layer-types M S M S M P --pre-or-post post --regression-loss-fn mae```
+```python -m esa.train --dataset QM9 --dataset-download-dir <DS_DIR> --dataset-one-hot --dataset-target-name homo --lr 0.0001 --batch-size 128 --norm-type BN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 256 --apply-attention-on edge --use-mlps --mlp-hidden-size 256 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJECT> --hidden-dims 256 256 256 256 256 256 --num-heads 16 16 16 16 16 16 --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type standard --use-bfloat16 --layer-types M S M S M P --pre-or-post post --regression-loss-fn mae```
 
 ### DOCKSTRING
 
-```python -m esa.train --dataset DOCKSTRING --dataset-download-dir <DL_DIR> --dataset-one-hot --dataset-target-name PGR --lr 0.0001 --batch-size 128 --norm-type BN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 256 --apply-attention-on edge --use-mlps --mlp-hidden-size 256 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJECT> --hidden-dims 256 256 256 256 256 256 --num-heads 16 16 16 16 16 16 --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type standard --use-bfloat16 --layer-types M S M S M P --pre-or-post post --regression-loss-fn mse```
+```python -m esa.train --dataset DOCKSTRING --dataset-download-dir <DS_DIR> --dataset-one-hot --dataset-target-name PGR --lr 0.0001 --batch-size 128 --norm-type BN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 256 --apply-attention-on edge --use-mlps --mlp-hidden-size 256 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJECT> --hidden-dims 256 256 256 256 256 256 --num-heads 16 16 16 16 16 16 --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type standard --use-bfloat16 --layer-types M S M S M P --pre-or-post post --regression-loss-fn mse```
 
 ### MNIST
 
-```python -m esa.train --dataset MNIST --dataset-download-dir <DL_DIR> --dataset-one-hot --lr 0.0001 --batch-size 128 --norm-type BN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 256 --apply-attention-on edge --use-mlps --mlp-hidden-size 256 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJECT> --hidden-dims 256 256 256 256 256 256 --num-heads 16 16 16 16 16 16 --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type standard --use-bfloat16 --pre-or-post post --layer-types M S M S M P```
+```python -m esa.train --dataset MNIST --dataset-download-dir <DS_DIR> --dataset-one-hot --lr 0.0001 --batch-size 128 --norm-type BN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 256 --apply-attention-on edge --use-mlps --mlp-hidden-size 256 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJECT> --hidden-dims 256 256 256 256 256 256 --num-heads 16 16 16 16 16 16 --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type standard --use-bfloat16 --pre-or-post post --layer-types M S M S M P```
 
 ### Long-range graph benchmark (LRGB) peptides
 
-```python -m esa.train --dataset lrgb-pept-struct --dataset-download-dir <DL_DIR> --dataset-one-hot --dataset-target-name None --lr 0.0001 --batch-size 128 --norm-type BN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 256 --apply-attention-on edge --use-mlps --mlp-hidden-size 256 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJECT> --hidden-dims 256 256 256 256 256 256 --num-heads 16 16 16 16 16 16 --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type standard --use-bfloat16 --layer-types M S M S M P --pre-or-post post --regression-loss-fn mae```
+```python -m esa.train --dataset lrgb-pept-struct --dataset-download-dir <DS_DIR> --dataset-one-hot --dataset-target-name None --lr 0.0001 --batch-size 128 --norm-type BN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 256 --apply-attention-on edge --use-mlps --mlp-hidden-size 256 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJECT> --hidden-dims 256 256 256 256 256 256 --num-heads 16 16 16 16 16 16 --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type standard --use-bfloat16 --layer-types M S M S M P --pre-or-post post --regression-loss-fn mae```
 
 The two possible choices for LRGB datasets are: `--dataset lrgb-pept-struct` and `--dataset lrgb-pept-fn`.
 
@@ -335,7 +335,7 @@ You must disable the import of `bnb` when using the `fairseq` environment and sw
 
 ## Cora
 
-```python -m esa.train --dataset Cora --dataset-download-dir <DL_DIR> --dataset-one-hot --lr 0.0001 --batch-size 128 --norm-type BN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 256 --apply-attention-on node --use-mlps --mlp-hidden-size 256 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJECT> --hidden-dims 256 256 256 256 256 --num-heads 16 16 16 16 16 --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type standard --use-bfloat16 --layer-types M S M S M --pre-or-post post```
+```python -m esa.train --dataset Cora --dataset-download-dir <DS_DIR> --dataset-one-hot --lr 0.0001 --batch-size 128 --norm-type BN --early-stopping-patience 30 --monitor-loss-name val_loss/dataloader_idx_0 --graph-dim 256 --apply-attention-on node --use-mlps --mlp-hidden-size 256 --out-path <OUT_PATH> --wandb-project-name <WANDB_PROJECT> --hidden-dims 256 256 256 256 256 --num-heads 16 16 16 16 16 --sab-dropout 0 --mab-dropout 0 --pma-dropout 0 --seed 0 --optimiser-weight-decay 1e-10 --gradient-clip-val 0.5 --xformers-or-torch-attn xformers --mlp-type standard --use-bfloat16 --layer-types M S M S M --pre-or-post post```
 
 ## Shortest paths (infected)
 
@@ -411,29 +411,29 @@ np.save(os.path.join(args.out_dir, 'train_time.npy'), time_elapsed_train)
 
 # Requirements
 
-The code requires the following libraries to be installed: PyTorch, PyTorch Lightning, PyTorch Geometric, xformers, flash_attn (including the `fused_dense_lib` subcomponents), transformers, datasets, bitsandbytes, wandb, and the LRGB dependencies from the official repository if LRGB tasks are desired. The code requires an NVIDIA GPU to run, preferably Ampere-class or newer.  
+The code requires the following libraries to be installed: PyTorch, PyTorch Lightning, PyTorch Geometric, xformers, flash_attn (including the `fused_dense_lib` subcomponents), transformers, datasets, accelerate, bitsandbytes, wandb, Cython, ogb, admin-torch, and the LRGB dependencies from the official repository if LRGB tasks are desired. The code requires an NVIDIA GPU to run, preferably Ampere-class or newer.  
 
-An example conda `env.yaml` file is provided as an example of the required packages and to help with installation.
+An example conda environment file `conda_envs/env.yaml` is provided as an example of the required packages and to help with installation.
 
-Efficient attention implementations are improving rapidly and we recommend installing the latest versions. At the time of writing, these steps apply:
+Efficient attention implementations are improving rapidly and we recommend installing the latest versions. At the time of writing, these are:
 
 1. Create conda environment:
 ```mamba create --name torch-esa python=3.11 -y```
 ```mamba activate torch-esa```
 
-2. Install PyTorch
+2. Install PyTorch (2.5.1)
 ```mamba install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia -y```
 
-3. Install PyTorch Geometric and auxiliary packages
+3. Install PyTorch Geometric (2.6.1) and auxiliary packages
 ```mamba install pyg -c pyg -y```
 ```mamba install pytorch-scatter -c pyg -y```
 ```mamba install pytorch-sparse -c pyg -y```
 ```mamba install pytorch-cluster -c pyg -y```
 
-4. Install xformers
+4. Install xformers (v0.0.28.post3)
 ```pip install xformers --index-url https://download.pytorch.org/whl/cu121```
 
-5. Install Flash attention
+5. Install Flash attention (v2.7.0.post2)
   ```pip install flash-attn --no-build-isolation```
 
 6. Install specific version of transformers from huggingface
@@ -447,6 +447,6 @@ Efficient attention implementations are improving rapidly and we recommend insta
 
 ## Fairseq
 
-Training on OCP requires the package `fairseq` to be installed. Unfortunately, Graphormer 3D uses the first version of `fairseq`, not `fairseq2`. The binaries of the old `fairseq` are not compatible with the latest versions of Python, PyTorch, and CUDA. Thus, the packages must be manually built from source which takes significant time and effort. Two versions of a `fairseq` environment export from `conda` were attached in an attempt to help reproduce our environment. The file `fairseq_env.yml` corresponds to a simple export, while the file `fairseq_from_history_env.yml` used the additional option `--from-history`.
+Training on OCP requires the package `fairseq` to be installed. Unfortunately, Graphormer 3D uses the first version of `fairseq`, not `fairseq2`. The binaries of the old `fairseq` are not compatible with the latest versions of Python, PyTorch, and CUDA. Thus, the packages must be manually built from source which takes significant time and effort. Two versions of a `fairseq` environment export from `conda` were attached in an attempt to help reproduce our environment. The file `conda_envs/fairseq_env.yaml` corresponds to a simple export, while the file `conda_envs/fairseq_from_history_env.yaml` used the additional option `--from-history`.
 
-**IMPORTANT**: The `.yml` files are anonymised and you must replace the placeholder `<NAME>` and `<PREFIX>` if you want to use them directly.
+**IMPORTANT**: The `.yaml` files are anonymised and you must replace the placeholder `<NAME>` and `<PREFIX>` if you want to use them directly.

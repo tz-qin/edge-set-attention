@@ -110,6 +110,7 @@ def main():
         assert ckpt_path is not None, "Must specify a trained LQ model checkpoint path!"
         assert "gw" in target_name, "Fine-tuning must be done on one of the GW targets!"
 
+    assert args.regression_loss_fn is not None, "A loss functions must be specified for regression tasks!"
 
     if hq_or_lq == "hq":
         train, val, test, num_classes, task_type, scaler = get_dataset_train_val_test_tokengt_3d(
