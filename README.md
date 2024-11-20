@@ -3,8 +3,6 @@
 
 # An end-to-end attention-based approach for learning on graphs
 
-  
-
 This source code archive accompanies the *An end-to-end attention-based approach for learning on graphs* paper. It includes the code required to run experiments involving GNNs, ESA, Graphormer/TokenGT, GraphGPS, as well as instructions and all the used datasets.
 
 The code was refactored several times during development and the results might slightly differ from the paper. This code is meant to act as a demo for the main experiments in the paper (benchmarks) and document the implementation.
@@ -25,11 +23,13 @@ We provide code for three main types of tasks:
 Most datasets used in this work can be downloaded through PyTorch Geometric (PyG). For those that are not available in PyG, we include links to access them, namely:
 
 - DOCKSTRING
+- QM9 accurate GW frontier orbital energies with 3D coordinates (for transfer learning)
 - Shortest path datasets (infected) - these can be generated through PyG using the commands given in the SI of the paper. However, we provide them for convenience.
 - Heterophily datasets (`roman empire`, `amazon ratings`, `minesweeper`, `tolokers`, `squirrel_filtered`, `chameleon_filtered`)
-- QM9 accurate GW frontier orbital energies with 3D coordinates (for transfer learning)
 
-The only exception is for the Open Catalyst Project (OCP) dataset, as the files would total around 4GB. For OCP, please download the following files from https://fair-chem.github.io/core/datasets/oc20.html:
+These can be downloaded from [this auxiliary repository](https://github.com/davidbuterez/esa-paper-extra-datasets). The datasets are already in the required format and are ready to be loaded using the data loading pipeline.
+
+The only exception is for the Open Catalyst Project (OCP) dataset, as the files would total around 4GB. For OCP, the following files are required from https://fair-chem.github.io/core/datasets/oc20.html:
 
 - Train: `.../is2re/10k/train/data.lmdb`
 - Test: `.../is2re/all/val_id/data.lmdb`
