@@ -790,6 +790,8 @@ def load_zinc_benchmark(dataset, download_dir, **kwargs):
 
 
 def load_pcqm(download_dir, **kwargs):
+    # NOTE: We disabled the code for the maximum number of nodes/edges for efficiency reasons (takes 30+ min)
+    # NOTE: Instead, we hard-code this value in the ESA code to 118 (maximum number of edges)
     transforms = []
 
     if "pe_types" in kwargs.keys() and len(kwargs["pe_types"]) > 0:
