@@ -3,7 +3,7 @@
 
 # An end-to-end attention-based approach for learning on graphs
 
-This source code archive accompanies the *An end-to-end attention-based approach for learning on graphs* paper. It includes the code required to run experiments involving GNNs, ESA, Graphormer/TokenGT, GraphGPS, as well as instructions and all the used datasets.
+This source code archive accompanies the [An end-to-end attention-based approach for learning on graphs](https://www.nature.com/articles/s41467-025-60252-z) paper, out now in Nature Communications. It includes the code required to run experiments involving GNNs, ESA, Graphormer/TokenGT, GraphGPS, as well as instructions and all the used datasets.
 
 The code was refactored several times during development and the results might slightly differ from the paper. This code is meant to act as a demo for the main experiments in the paper (benchmarks) and document the implementation.
 
@@ -458,3 +458,27 @@ Efficient attention implementations are improving rapidly and we recommend insta
 Training on OCP requires the package `fairseq` to be installed. Unfortunately, Graphormer 3D uses the first version of `fairseq`, not `fairseq2`. The binaries of the old `fairseq` are not compatible with the latest versions of Python, PyTorch, and CUDA. Thus, the packages must be manually built from source which takes significant time and effort. Two versions of a `fairseq` environment export from `conda` were attached in an attempt to help reproduce our environment. The file `helper/conda_envs/fairseq_env.yaml` corresponds to a simple export, while the file `helper/conda_envs/fairseq_from_history_env.yaml` used the additional option `--from-history`.
 
 **IMPORTANT**: The `.yaml` files are anonymised and you must replace the placeholder `<NAME>` and `<PREFIX>` if you want to use them directly.
+
+## Citation
+
+If you use ESA in your work, a citation to the paper is appreciated:
+
+```
+@Article{Buterez2025,
+	author={Buterez, David
+	and Janet, Jon Paul
+	and Oglic, Dino
+	and Li{\`o}, Pietro},
+	title={An end-to-end attention-based approach for learning on graphs},
+	journal={Nature Communications},
+	year={2025},
+	month={Jun},
+	day={05},
+	volume={16},
+	number={1},
+	pages={5244},
+	issn={2041-1723},
+	doi={10.1038/s41467-025-60252-z},
+	url={https://doi.org/10.1038/s41467-025-60252-z}
+}
+```
