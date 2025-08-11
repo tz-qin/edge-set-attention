@@ -15,6 +15,7 @@ from data_loading.pyg_molecular_datasets.molecule_net import MoleculeNet as Cust
 from data_loading.lrgb import PeptidesFunctionalDataset, PeptidesStructuralDataset
 from data_loading.graphgps_utils import join_dataset_splits
 from data_loading.transforms import *
+from data_loading.ffpm_molecular_loader import get_ffpm_molecular_dataset_train_val_test
 
 from rdkit import RDLogger
 
@@ -1072,6 +1073,11 @@ def get_dataset_train_val_test(dataset, dataset_dir, **kwargs):
         return load_infected(dataset, dataset_dir, **kwargs)
     elif "hetero" in dataset:
         return load_heterophilic(dataset, dataset_dir, **kwargs)
+    elif dataset == "FFPM_MOLECULAR":
+        # For FFPM molecular dataset, dataset_dir should be the parquet file path
+        # and target_name should be specified in kwargs
+        target_column = kwargs.get('target_name', 'property_value::Mic-CRO')
+        return get_ffpm_molecular_dataset_train_val_test(dataset_dir, target_column, **kwargs)
     
 
 def get_dataset_train_val_test_with_indices_for_graphgps(dataset, dataset_dir, **kwargs):

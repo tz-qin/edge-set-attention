@@ -13,7 +13,7 @@ from torch_geometric.seed import seed_everything
 from torch_geometric.loader import DataLoader as GeometricDataLoader
 from torch.utils.data import DataLoader
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.loggers import WandbLogger, TensorBoardLogger
 
 # Imports from this project
 sys.path.append(os.path.realpath("."))
@@ -52,7 +52,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     # Seed for seed_everything
-    parser.add_argument("--seed", type=int)
+    parser.add_argument("--seed", type=int, default=42)
 
     # Dataset arguments
     parser.add_argument("--dataset", type=str)
@@ -152,6 +152,10 @@ def main():
     pma_residual_dropout = argsdict["pma_residual_dropout"]
     use_mlp_ln = argsdict["use_mlp_ln"] == "yes"
 
+    # Set default monitor loss name if not provided
+    if monitor_loss_name is None:
+        monitor_loss_name = "val_loss"
+    
     if monitor_loss_name == "MCC" or "MCC" in monitor_loss_name:
         monitor_loss_name = "Validation MCC"
 
@@ -241,10 +245,13 @@ def main():
     config_json_path = save_arguments_to_json(argsdict, output_save_dir)
 
     # Logging
-    logger = WandbLogger(name=run_name, project=wandb_project_name, save_dir=output_save_dir)
+    if wandb_project_name:
+        logger = WandbLogger(name=run_name, project=wandb_project_name, save_dir=output_save_dir)
+    else:
+        logger = TensorBoardLogger(save_dir=output_save_dir, name="mnist_logs")
 
     # Callbacks
-    monitor_mode = "max" if "MCC" in monitor_loss_name else "min"
+    monitor_mode = "max" if monitor_loss_name and "MCC" in monitor_loss_name else "min"
     checkpoint_callback = ModelCheckpoint(
         monitor=monitor_loss_name,
         dirpath=output_save_dir,
@@ -310,16 +317,17 @@ def main():
     np.save(true_path, model.test_true)
     np.save(metrics_path, model.test_metrics)
 
-    wandb.save(preds_path)
-    wandb.save(true_path)
-    wandb.save(metrics_path)
-    wandb.save(config_json_path)
+    if wandb_project_name:
+        wandb.save(preds_path)
+        wandb.save(true_path)
+        wandb.save(metrics_path)
+        wandb.save(config_json_path)
 
-    # ckpt_paths = [str(p) for p in Path(output_save_dir).rglob("*.ckpt")]
-    # for cp in ckpt_paths:
-    #     wandb.save(cp)
+        # ckpt_paths = [str(p) for p in Path(output_save_dir).rglob("*.ckpt")]
+        # for cp in ckpt_paths:
+        #     wandb.save(cp)
 
-    wandb.finish()
+        wandb.finish()
 
 
 if __name__ == "__main__":
