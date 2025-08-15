@@ -95,6 +95,10 @@ def main():
     parser.add_argument("--mlp-type", type=str, choices=["standard", "gated_mlp"], default="gated_mlp")
     parser.add_argument("--mlp-dropout", type=float, default=0.0)
     parser.add_argument("--use-mlp-ln", type=str, choices=["yes", "no"], default="yes")
+    
+    # Molecular descriptor arguments (for FFPM_MOLECULAR dataset)
+    parser.add_argument("--use-molecular-descriptors", default=False, action=argparse.BooleanOptionalAction)
+    parser.add_argument("--molecular-descriptor-dim", type=int, default=10)
 
     # 3D OCP settings
     parser.add_argument("--ocp-num-kernels", type=int)
@@ -135,6 +139,10 @@ def main():
     apply_attention_on = argsdict["apply_attention_on"]
     mlp_dropout = argsdict["mlp_dropout"]
     regr_fn = argsdict["regression_loss_fn"]
+    
+    # Molecular descriptor arguments
+    use_molecular_descriptors = argsdict["use_molecular_descriptors"]
+    molecular_descriptor_dim = argsdict["molecular_descriptor_dim"]
 
     # # 3D OCP settings
     num_kernels = argsdict["ocp_num_kernels"]
@@ -278,6 +286,7 @@ def main():
         train_mask=train_mask, val_mask=val_mask, test_mask=test_mask,
         posenc=posenc, num_mlp_layers=num_mlp_layers, pre_or_post=pre_or_post,
         use_mlp_ln=use_mlp_ln, mlp_dropout=mlp_dropout,
+        use_molecular_descriptors=use_molecular_descriptors, molecular_descriptor_dim=molecular_descriptor_dim,
     )
 
     if dataset != "ocp":

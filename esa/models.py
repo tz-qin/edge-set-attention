@@ -78,6 +78,8 @@ class Estimator(pl.LightningModule):
         pma_residual_dropout: float = 0,
         use_mlp_ln: bool = False,
         mlp_dropout: float = 0,
+        use_molecular_descriptors: bool = False,
+        molecular_descriptor_dim: int = 10,
         **kwargs,
     ):
         super().__init__()
@@ -101,6 +103,8 @@ class Estimator(pl.LightningModule):
         self.use_mlp_ln = use_mlp_ln
         self.pre_or_post = pre_or_post
         self.mlp_dropout = mlp_dropout
+        self.use_molecular_descriptors = use_molecular_descriptors
+        self.molecular_descriptor_dim = molecular_descriptor_dim
 
         self.use_mlps = use_mlps
         self.early_stopping_patience = early_stopping_patience
@@ -258,17 +262,21 @@ class Estimator(pl.LightningModule):
 
         self.st_fast = ESA(**st_args)
 
+        # Determine input dimension for output MLP
+        # Graph representation from ESA + optional molecular descriptors
+        output_mlp_input_dim = self.graph_dim
+        if self.use_molecular_descriptors:
+            output_mlp_input_dim += self.molecular_descriptor_dim
+
         if self.mlp_type in ["standard", "gated_mlp"]:
             self.output_mlp = SmallMLP(
-                in_dim=self.graph_dim,
+                in_dim=output_mlp_input_dim,
                 inter_dim=128,
                 out_dim=self.linear_output_size,
-                use_ln=False,
-                dropout_p=0,
+                use_ln=self.use_mlp_ln,
+                dropout_p=self.mlp_dropout,
                 num_layers=self.num_mlp_layers if self.num_mlp_layers > 1 else self.num_mlp_layers + 1,
             )
-
-            self.output_mlp = nn.Linear(self.graph_dim, self.linear_output_size)
 
         # Uncomment if you want the gated MLP here
             
@@ -327,7 +335,60 @@ class Estimator(pl.LightningModule):
             if self.is_node_task:
                 h = h[dense_batch_index]
 
-        predictions = torch.flatten(self.output_mlp(h))
+        # ========================================================================================
+        # MOLECULAR DESCRIPTOR FUSION FOR FINAL PREDICTION
+        # ========================================================================================
+        """
+        Final prediction head that optionally incorporates molecular descriptors with the 
+        graph representation learned from Edge-Set-Attention (ESA).
+        
+        This design philosophy follows the principle that:
+        1. Node and edge features should only contain local structural information
+        2. Graph-level molecular descriptors (molecular weight, logP, etc.) should be 
+           incorporated at the final representation stage before prediction
+        3. This allows the ESA model to focus on learning structural patterns while
+           global molecular properties inform the final prediction
+        
+        Implementation Details:
+        - h: Graph representation from ESA (shape: [batch_size, graph_dim])
+        - molecular_descriptors: Global molecular properties (shape: [batch_size, molecular_descriptor_dim])
+        - The two representations are concatenated before the final MLP
+        - The output MLP is designed to handle the concatenated representation
+        
+        Benefits of this approach:
+        - Clear separation of concerns: structural vs. global features
+        - ESA learns pure graph patterns without global feature bias
+        - Global molecular properties enhance final prediction accuracy
+        - More interpretable and modular architecture
+        """
+        
+        if self.use_molecular_descriptors and hasattr(batch, 'molecular_descriptors'):
+            # Extract molecular descriptors from batch
+            # PyTorch Geometric concatenates molecular descriptors as a flat tensor during batching
+            # molecular_descriptors shape: [batch_size * molecular_descriptor_dim]
+            mol_desc = batch.molecular_descriptors.float()
+            
+            # Determine batch size from h
+            batch_size = h.shape[0]
+            
+            # Reshape molecular descriptors to proper batch format
+            # From: [batch_size * molecular_descriptor_dim] 
+            # To:   [batch_size, molecular_descriptor_dim]
+            mol_desc = mol_desc.view(batch_size, self.molecular_descriptor_dim)
+            
+            # Verify shapes are compatible
+            assert mol_desc.shape[0] == h.shape[0], f"Batch size mismatch: h={h.shape[0]}, mol_desc={mol_desc.shape[0]}"
+            assert mol_desc.shape[1] == self.molecular_descriptor_dim, f"Molecular descriptor dim mismatch: expected={self.molecular_descriptor_dim}, got={mol_desc.shape[1]}"
+            
+            # Concatenate graph representation with molecular descriptors
+            # Final representation: [batch_size, graph_dim + molecular_descriptor_dim]
+            final_representation = torch.cat([h, mol_desc], dim=-1)
+            
+            # Apply output MLP to combined representation
+            predictions = torch.flatten(self.output_mlp(final_representation))
+        else:
+            # Standard path: only graph representation from ESA
+            predictions = torch.flatten(self.output_mlp(h))
 
         return predictions
     

@@ -17,13 +17,18 @@ The integration follows this data flow:
 ## Feature Format
 
 **Node Features (36-dimensional):**
-- 26-dim: FFPM atom features (atomic properties, hybridization, etc.)
-- 10-dim: Molecular descriptors (x_log_p, aromatic_ring_count, molecular_weight, 
-          num_acceptors, num_donors, rotatable_bonds, tpsa, log_d, 
-          most_acidic_pka, most_basic_pka)
+FFPM atom features (atomic properties, hybridization, etc.)
 
 **Edge Features (11-dimensional):**
 - FFPM bond features (bond type, aromaticity, ring membership, etc.)
+
+**Graph Features:**
+- 10-dim: Molecular descriptors (x_log_p, aromatic_ring_count, molecular_weight, 
+          num_acceptors, num_donors, rotatable_bonds, tpsa, log_d, 
+          most_acidic_pka, most_basic_pka) - stored separately and appended to 
+          final graph representation before prediction
+
+- 1-dim: Target variable (e.g., property_value::Mic-CRO)
 
 ## Data Splitting Strategy
 
@@ -61,9 +66,10 @@ train, val, test, num_classes, task_type, scaler = get_ffpm_molecular_dataset_tr
 ### ESA Training Command
 ```bash
 # Example training command for FFPM molecular data (uses pre-defined splits automatically)
+# Option 1: Without molecular descriptors (pure structural learning)
 python -m esa.train \
     --dataset FFPM_MOLECULAR \
-    --dataset-download-dir /rxrx/data/user/thomas.qin/hclint \
+    --dataset-download-dir /rxrx/data/user/thomas.qin/hclint/dataset_feated.parquet \
     --dataset-target-name property_value::Mic-CRO \
     --dataset-one-hot \
     --lr 0.0001 \
@@ -71,7 +77,7 @@ python -m esa.train \
     --norm-type BN \
     --early-stopping-patience 30 \
     --monitor-loss-name val_loss/dataloader_idx_0 \
-    --regression-loss-fn mae \
+    --regression-loss-fn mse \
     --graph-dim 256 \
     --apply-attention-on edge \
     --use-mlps \
@@ -90,12 +96,47 @@ python -m esa.train \
     --use-bfloat16 \
     --pre-or-post post \
     --layer-types M S M S M P
+
+# Option 2: With molecular descriptors (structural + global properties)
+python -m esa.train \
+    --dataset FFPM_MOLECULAR \
+    --dataset-download-dir /rxrx/data/user/thomas.qin/hclint \
+    --dataset-target-name property_value::Mic-CRO \
+    --dataset-one-hot \
+    --use-molecular-descriptors \
+    --molecular-descriptor-dim 10 \
+    --lr 0.0001 \
+    --batch-size 128 \
+    --norm-type BN \
+    --early-stopping-patience 30 \
+    --monitor-loss-name val_loss/dataloader_idx_0 \
+    --regression-loss-fn mse \
+    --graph-dim 256 \
+    --apply-attention-on edge \
+    --use-mlps \
+    --mlp-hidden-size 256 \
+    --out-path ffpm_molecular_output_with_descriptors \
+    --hidden-dims 256 256 256 256 256 256 \
+    --num-heads 16 16 16 16 16 16 \
+    --sab-dropout 0.1 \
+    --mab-dropout 0.1 \
+    --pma-dropout 0.1 \
+    --seed 42 \
+    --optimiser-weight-decay 1e-10 \
+    --gradient-clip-val 0.5 \
+    --xformers-or-torch-attn xformers \
+    --mlp-type standard \
+    --use-bfloat16 \
+    --pre-or-post post \
+    --layer-types M S M S M P
 ```
 
 ### Key Parameter Notes for Molecular Data:
 - `--dataset FFPM_MOLECULAR`: Specifies the molecular dataset type
 - `--dataset-download-dir`: Path to directory containing parquet files
 - `--dataset-target-name`: Target column (e.g., property_value::Mic-CRO)
+- `--use-molecular-descriptors`: Whether to append molecular descriptors to final graph representation
+- `--molecular-descriptor-dim 10`: Dimension of molecular descriptors (default: 10 for FFPM)
 - `--regression-loss-fn mae`: Loss function for regression tasks (mae or mse)
 - `--apply-attention-on edge`: ESA attention on edges (recommended for molecular graphs)
 - `--graph-dim 256`: Graph representation dimension matching molecular complexity
@@ -103,7 +144,7 @@ python -m esa.train \
 
 ## Implementation Changes (August 2025)
 
-Recent updates to support pre-defined train/test splits:
+Recent updates to support pre-defined train/test splits and improved molecular feature handling:
 
 1. **Enhanced Auto-detection Logic**: The main wrapper function now intelligently 
    detects whether input is a directory or single file and chooses appropriate 
@@ -118,6 +159,11 @@ Recent updates to support pre-defined train/test splits:
 
 4. **Improved ESA Integration**: No changes required to ESA's main data loading 
    interface - the integration remains transparent.
+
+5. **Molecular Descriptor Refactoring**: Molecular descriptors are now stored separately
+   from node features and appended to the final graph representation before prediction.
+   This follows the principle that node/edge features should contain only local structural
+   information, while global molecular properties enhance the final prediction.
 
 ## Data Statistics (HCLINT Example)
 
@@ -161,12 +207,19 @@ class FFPMMolecularDataset(InMemoryDataset):
     """
     PyTorch Geometric dataset for molecular data featurized with FFPM.
     
-    This dataset converts FFMP featurized molecular data to PyG format suitable
+    This dataset converts FFPM featurized molecular data to PyG format suitable
     for ESA models. It handles:
     - Converting FFPM GNN2D features to PyG node/edge features
-    - Adding molecular descriptors as additional node features
+    - Storing molecular descriptors separately as graph-level features
     - Proper graph construction from bond indices
     - Target variable selection and preprocessing
+    
+    Design Philosophy:
+    - Node and edge features contain only local structural information
+    - Molecular descriptors are stored separately and combined with graph
+      representation at the final prediction stage
+    - This allows ESA to learn pure structural patterns while global
+      molecular properties enhance prediction accuracy
     """
     
     def __init__(
@@ -174,9 +227,6 @@ class FFPMMolecularDataset(InMemoryDataset):
         parquet_path: str,
         target_column: str,
         task_type: str = "regression",
-        include_molecular_descriptors: bool = False,
-        molecular_descriptor_cols: Optional[List[str]] = None,
-        exclude_molecular_descriptor_cols: Optional[List[str]] = None,
         transform=None,
         pre_transform=None,
         pre_filter=None,
@@ -188,9 +238,6 @@ class FFPMMolecularDataset(InMemoryDataset):
             parquet_path: Path to the featurized parquet file
             target_column: Column name for the target variable
             task_type: "regression" or "classification"
-            include_molecular_descriptors: Whether to include molecular descriptors as node features
-            molecular_descriptor_cols: List of molecular descriptor columns to include (if None, uses default list)
-            exclude_molecular_descriptor_cols: List of molecular descriptor columns to exclude from default list
             transform: PyG transform to apply on-the-fly
             pre_transform: PyG transform to apply during processing
             pre_filter: PyG filter to apply during processing
@@ -198,28 +245,6 @@ class FFPMMolecularDataset(InMemoryDataset):
         self.parquet_path = parquet_path
         self.target_column = target_column
         self.task_type = task_type
-        self.include_molecular_descriptors = include_molecular_descriptors
-        
-        # Configure molecular descriptor columns
-        default_molecular_descriptor_cols = [
-            'x_log_p', 'aromatic_ring_count', 'molecular_weight',
-            'num_acceptors', 'num_donors', 'rotatable_bonds', 
-            'tpsa', 'log_d', 'most_acidic_pka', 'most_basic_pka'
-        ]
-        
-        if molecular_descriptor_cols is not None:
-            # Use explicitly specified columns
-            self.molecular_descriptor_cols = molecular_descriptor_cols
-        else:
-            # Start with default columns
-            self.molecular_descriptor_cols = default_molecular_descriptor_cols.copy()
-            
-            # Remove excluded columns if specified
-            if exclude_molecular_descriptor_cols is not None:
-                self.molecular_descriptor_cols = [
-                    col for col in self.molecular_descriptor_cols 
-                    if col not in exclude_molecular_descriptor_cols
-                ]
             
         # Create unique cache directory based on parquet file path and configuration to avoid conflicts
         import os
@@ -227,9 +252,7 @@ class FFPMMolecularDataset(InMemoryDataset):
         parquet_name = os.path.basename(parquet_path)
         path_hash = hashlib.md5(parquet_path.encode()).hexdigest()[:8]
         
-        # Include feature configuration in cache path to avoid conflicts
-        feature_config = f"moldescs_{include_molecular_descriptors}_cols_{len(self.molecular_descriptor_cols)}"
-        cache_dir = f"./cache_ffpm_{parquet_name}_{target_column}_{feature_config}_{path_hash}"
+        cache_dir = f"./cache_ffpm_{parquet_name}_{target_column}_{path_hash}"
         
         super().__init__(cache_dir, transform, pre_transform, pre_filter)
         self.data, self.slices = torch.load(self.processed_paths[0], weights_only=False)
@@ -310,20 +333,6 @@ class FFPMMolecularDataset(InMemoryDataset):
             atom_features_list = [np.array(feat, dtype=np.float32) for feat in atom_features]
             x = torch.tensor(np.stack(atom_features_list), dtype=torch.float)
             
-            # Add molecular descriptors to node features if requested
-            if self.include_molecular_descriptors:
-                mol_descriptors = []
-                for col in self.molecular_descriptor_cols:
-                    if col in row.index and not pd.isna(row[col]):
-                        mol_descriptors.append(float(row[col]))
-                    else:
-                        mol_descriptors.append(0.0)  # Default value for missing descriptors
-                
-                # Broadcast molecular descriptors to all atoms
-                mol_desc_tensor = torch.tensor(mol_descriptors, dtype=torch.float)
-                mol_desc_expanded = mol_desc_tensor.unsqueeze(0).expand(num_atoms, -1)
-                x = torch.cat([x, mol_desc_expanded], dim=1)
-            
             # Convert bond indices to edge_index
             # FFPM bond_idxs contains arrays of (src, dst) pairs, not flattened pairs
             edge_pairs = []
@@ -353,6 +362,22 @@ class FFPMMolecularDataset(InMemoryDataset):
             # Extract target variable
             y = torch.tensor([float(row[self.target_column])], dtype=torch.float)
             
+            # Extract molecular descriptors as graph-level features (not added to nodes)
+            default_molecular_descriptor_cols = [
+                'x_log_p', 'aromatic_ring_count', 'molecular_weight',
+                'num_acceptors', 'num_donors', 'rotatable_bonds', 
+                'tpsa', 'log_d', 'most_acidic_pka', 'most_basic_pka'
+            ]
+            
+            mol_descriptors = []
+            for col in default_molecular_descriptor_cols:
+                if col in row.index and not pd.isna(row[col]):
+                    mol_descriptors.append(float(row[col]))
+                else:
+                    mol_descriptors.append(0.0)  # Default value for missing descriptors
+            
+            mol_desc_tensor = torch.tensor(mol_descriptors, dtype=torch.float)
+            
             # Create PyG Data object
             data = Data(
                 x=x,
@@ -361,6 +386,7 @@ class FFPMMolecularDataset(InMemoryDataset):
                 y=y,
                 smiles=row['canonical_smiles'],
                 num_nodes=num_atoms,
+                molecular_descriptors=mol_desc_tensor,  # Store molecular descriptors separately
             )
             
             return data
@@ -376,9 +402,6 @@ def load_ffpm_molecular_data_with_predefined_splits(
     target_column: str,
     task_type: str = "regression",
     val_frac: float = 0.2,  # Fraction of training data to use for validation
-    include_molecular_descriptors: bool = False,
-    molecular_descriptor_cols: Optional[List[str]] = None,
-    exclude_molecular_descriptor_cols: Optional[List[str]] = None,
     random_seed: int = 42,
     pe_types: List[str] = None,  # Positional encoding types (not used for molecular data)
     **kwargs  # Accept additional arguments from ESA training
@@ -404,8 +427,6 @@ def load_ffpm_molecular_data_with_predefined_splits(
         target_column: Target variable column name (e.g., "property_value::Mic-CRO")
         task_type: "regression" or "classification"
         val_frac: Fraction of training data to use for validation (default: 0.2)
-        include_molecular_descriptors: Whether to include molecular descriptors as node features
-        molecular_descriptor_cols: List of molecular descriptor columns to include
         random_seed: Random seed for reproducible validation split from training data
         pe_types: Positional encoding types (not used for molecular data)
         **kwargs: Additional arguments from ESA training
@@ -433,9 +454,6 @@ def load_ffpm_molecular_data_with_predefined_splits(
         parquet_path=train_parquet_path,
         target_column=target_column,
         task_type=task_type,
-        include_molecular_descriptors=include_molecular_descriptors,
-        molecular_descriptor_cols=molecular_descriptor_cols,
-        exclude_molecular_descriptor_cols=exclude_molecular_descriptor_cols,
         pre_transform=T.Compose(transforms),
     )
     
@@ -445,9 +463,6 @@ def load_ffpm_molecular_data_with_predefined_splits(
         parquet_path=test_parquet_path,
         target_column=target_column,
         task_type=task_type,
-        include_molecular_descriptors=include_molecular_descriptors,
-        molecular_descriptor_cols=molecular_descriptor_cols,
-        exclude_molecular_descriptor_cols=exclude_molecular_descriptor_cols,
         pre_transform=T.Compose(transforms),
     )
     
@@ -537,8 +552,6 @@ def load_ffpm_molecular_data(
     task_type: str = "regression",
     train_frac: float = 0.7,
     val_frac: float = 0.15,
-    include_molecular_descriptors: bool = False,
-    molecular_descriptor_cols: Optional[List[str]] = None,
     random_seed: int = 42,
     pe_types: List[str] = None,  # Positional encoding types (not used for molecular data)
     **kwargs  # Accept additional arguments from ESA training
@@ -560,8 +573,6 @@ def load_ffpm_molecular_data(
         parquet_path=parquet_path,
         target_column=target_column,
         task_type=task_type,
-        include_molecular_descriptors=include_molecular_descriptors,
-        molecular_descriptor_cols=molecular_descriptor_cols,
         pre_transform=T.Compose(transforms),
     )
     
@@ -682,7 +693,7 @@ def get_ffpm_molecular_dataset_train_val_test(
         dataset_dir: Directory containing parquet files OR path to single parquet file
         target_column: Target variable column name (e.g., "property_value::Mic-CRO")
         **kwargs: Additional arguments passed to the loading functions
-                 (task_type, val_frac, include_molecular_descriptors, etc.)
+                 (task_type, val_frac, etc.)
         
     Returns:
         Tuple of (train_dataset, val_dataset, test_dataset, num_classes, task_type, scaler)
@@ -717,6 +728,8 @@ def get_ffpm_molecular_dataset_train_val_test(
     # Directory - check for pre-defined split files
     train_file = os.path.join(dataset_dir, "stl_train_set_08_10.parquet")
     test_file = os.path.join(dataset_dir, "test_set_08_10.parquet")
+    # train_file = os.path.join(dataset_dir, "train_random.parquet")
+    # test_file = os.path.join(dataset_dir, "test_random.parquet")
     
     if os.path.exists(train_file) and os.path.exists(test_file):
         print(f"Found pre-defined train/test splits: {train_file}, {test_file}")
