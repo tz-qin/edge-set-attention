@@ -80,10 +80,19 @@ class Estimator(pl.LightningModule):
         mlp_dropout: float = 0,
         use_molecular_descriptors: bool = False,
         molecular_descriptor_dim: int = 10,
+        # Note: Multi-task learning is no longer supported in this class.
+        # Use the new clean interface: from esa.estimators import create_estimator
         **kwargs,
     ):
         super().__init__()
         assert task_type in ["binary_classification", "multi_classification", "regression"]
+        
+        # Multi-task regression is no longer supported in this legacy class
+        if task_type == "multi_task_regression":
+            raise ValueError(
+                "Multi-task learning is no longer supported in this legacy Estimator class. "
+                "Use the new clean interface: from esa.estimators import create_estimator"
+            )
 
         self.graph_dim = graph_dim
         self.task_type = task_type
@@ -105,6 +114,11 @@ class Estimator(pl.LightningModule):
         self.mlp_dropout = mlp_dropout
         self.use_molecular_descriptors = use_molecular_descriptors
         self.molecular_descriptor_dim = molecular_descriptor_dim
+        
+        # Single-task only
+        self.is_multi_task = False
+        self.num_tasks = 1
+        print(f"Single-task mode: {self.linear_output_size} output(s)")
 
         self.use_mlps = use_mlps
         self.early_stopping_patience = early_stopping_patience
@@ -160,9 +174,9 @@ class Estimator(pl.LightningModule):
         self.rwse_encoder = None
         self.lap_encoder = None
 
-        if "RWSE" in self.posenc:
+        if self.posenc and "RWSE" in self.posenc:
             self.rwse_encoder = KernelPENodeEncoder()
-        if "LapPE" in self.posenc:
+        if self.posenc and "LapPE" in self.posenc:
             self.lap_encoder = LapPENodeEncoder()
  
         if self.norm_type == "BN":
@@ -187,16 +201,6 @@ class Estimator(pl.LightningModule):
                     num_layers=self.num_mlp_layers if self.num_mlp_layers > 1 else self.num_mlp_layers + 1,
                 )
 
-            # Uncomment if you want the gated MLP here
-            # elif self.mlp_type == "gated_mlp":
-            #     self.node_mlp = GatedMLPMulti(
-            #         in_dim=in_dim,
-            #         out_dim=self.hidden_dims[0],
-            #         inter_dim=128,
-            #         activation=F.silu,
-            #         dropout_p=0,
-            #         num_layers=self.num_mlp_layers,
-            #     )
 
 
         elif self.apply_attention_on == "edge":
@@ -220,17 +224,6 @@ class Estimator(pl.LightningModule):
                     num_layers=self.num_mlp_layers,
                 )
 
-            # Uncomment if you want the gated MLP here
-
-            # elif self.mlp_type == "gated_mlp":
-            #     self.node_edge_mlp = GatedMLPMulti(
-            #         in_dim=in_dim,
-            #         out_dim=self.hidden_dims[0],
-            #         inter_dim=128,
-            #         activation=F.silu,
-            #         dropout_p=0,
-            #         num_layers=self.num_mlp_layers,
-            #     )
             
 
         self.mlp_norm = norm_fn(self.hidden_dims[0])
@@ -262,13 +255,14 @@ class Estimator(pl.LightningModule):
 
         self.st_fast = ESA(**st_args)
 
-        # Determine input dimension for output MLP
+        # Determine input dimension for output MLP(s)
         # Graph representation from ESA + optional molecular descriptors
         output_mlp_input_dim = self.graph_dim
         if self.use_molecular_descriptors:
             output_mlp_input_dim += self.molecular_descriptor_dim
 
         if self.mlp_type in ["standard", "gated_mlp"]:
+            # Single-task: use single output MLP
             self.output_mlp = SmallMLP(
                 in_dim=output_mlp_input_dim,
                 inter_dim=128,
@@ -278,17 +272,6 @@ class Estimator(pl.LightningModule):
                 num_layers=self.num_mlp_layers if self.num_mlp_layers > 1 else self.num_mlp_layers + 1,
             )
 
-        # Uncomment if you want the gated MLP here
-            
-        # elif self.mlp_type == "gated_mlp":
-        #     self.output_mlp = GatedMLPMulti(
-        #         in_dim=self.graph_dim,
-        #         out_dim=self.linear_output_size,
-        #         inter_dim=128,
-        #         activation=F.silu,
-        #         dropout_p=0,
-        #         num_layers=self.num_mlp_layers,
-        #     )
 
 
     def forward(
@@ -383,13 +366,12 @@ class Estimator(pl.LightningModule):
             # Concatenate graph representation with molecular descriptors
             # Final representation: [batch_size, graph_dim + molecular_descriptor_dim]
             final_representation = torch.cat([h, mol_desc], dim=-1)
-            
-            # Apply output MLP to combined representation
-            predictions = torch.flatten(self.output_mlp(final_representation))
         else:
             # Standard path: only graph representation from ESA
-            predictions = torch.flatten(self.output_mlp(h))
+            final_representation = h
 
+        # Single-task: apply single output MLP
+        predictions = torch.flatten(self.output_mlp(final_representation))
         return predictions
     
 
@@ -426,6 +408,7 @@ class Estimator(pl.LightningModule):
     ):
         predictions = self.forward(x, edge_index, batch_mapping, edge_attr=edge_attr, num_max_items=num_max_items, batch=batch)
 
+        # Single-task learning only
         if self.task_type == "multi_classification":
             predictions = predictions.reshape(-1, self.linear_output_size)
 
@@ -482,9 +465,21 @@ class Estimator(pl.LightningModule):
             x, edge_index, y, batch_mapping, edge_attr=edge_attr, num_max_items=num_max_items, step_type=step_type, batch=batch
         )
 
-        predictions = predictions.detach().squeeze()
+        # Now both single-task and multi-task return the same format from _batch_loss
+        predictions = predictions.detach()
+        # Ensure predictions always have at least 1 dimension (never 0-dimensional)
+        if predictions.dim() == 0:
+            predictions = predictions.unsqueeze(0)
+        else:
+            predictions = predictions.squeeze()
+            
+        # Apply same fix to targets
+        if y.dim() == 0:
+            y = y.unsqueeze(0)
+        else:
+            y = y.squeeze()
 
-        if self.task_type == "regression":
+        if self.task_type in ["regression", "multi_task_regression"]:
             output = (predictions.cpu(), y.cpu())
         elif "classification" in self.task_type:
             output = (predictions.cpu(), y.cpu())
@@ -536,12 +531,32 @@ class Estimator(pl.LightningModule):
 
     def _epoch_end_report(self, epoch_outputs, epoch_type):
         def flatten_list_of_tensors(lst):
-            try:
-                return np.array([item.item() for sublist in lst for item in sublist])
-            except:
-                return torch.cat(lst, dim=0)
+            # For both single-task and multi-task, we now just concatenate tensors directly
+            # since both formats return tensors (either single values or concatenated multi-task values)
+            if len(lst) == 0:
+                return torch.tensor([])
+            
+            # Convert any numpy arrays to tensors and ensure all are tensors
+            tensor_list = []
+            for item in lst:
+                if isinstance(item, np.ndarray):
+                    tensor = torch.from_numpy(item)
+                elif isinstance(item, torch.Tensor):
+                    tensor = item
+                else:
+                    # Convert scalar to tensor
+                    tensor = torch.tensor([item])
+                
+                # Ensure tensor has at least 1 dimension for concatenation
+                if tensor.dim() == 0:
+                    tensor = tensor.unsqueeze(0)
+                    
+                tensor_list.append(tensor)
+            
+            return torch.cat(tensor_list, dim=0)
 
-        if self.task_type == "regression":
+        # Both single-task and multi-task now use the same format
+        if self.task_type in ["regression", "multi_task_regression"]:
             y_pred = flatten_list_of_tensors([item[0] for item in epoch_outputs]).reshape(-1, self.linear_output_size)
             y_true = flatten_list_of_tensors([item[1] for item in epoch_outputs]).reshape(-1, self.linear_output_size)
         else:
@@ -591,7 +606,7 @@ class Estimator(pl.LightningModule):
             self.log(f"{epoch_type} F1", metrics[3], batch_size=self.batch_size)
             self.log(f"{epoch_type} AP", metrics[4], batch_size=self.batch_size)
 
-        elif self.task_type == "regression":
+        elif self.task_type in ["regression", "multi_task_regression"]:
             if self.linear_output_size != 11:
                 metrics = get_regr_metrics_pt(y_true.squeeze(), y_pred.squeeze())
 
@@ -599,6 +614,12 @@ class Estimator(pl.LightningModule):
                 self.log(f"{epoch_type} MAE", metrics["MAE"], batch_size=self.batch_size)
                 self.log(f"{epoch_type} RMSE", metrics["RMSE"], batch_size=self.batch_size)
                 self.log(f"{epoch_type} SMAPE", metrics["SMAPE"], batch_size=self.batch_size)
+                
+                # For multi-task, also log as aggregated metrics
+                if self.is_multi_task:
+                    self.log(f"{epoch_type} MultiTask_Aggregated_R2", metrics["R2"], batch_size=self.batch_size)
+                    self.log(f"{epoch_type} MultiTask_Aggregated_MAE", metrics["MAE"], batch_size=self.batch_size)
+                    self.log(f"{epoch_type} MultiTask_Aggregated_RMSE", metrics["RMSE"], batch_size=self.batch_size)
             else:
                 mae_avg = []
                 for idx in range(11):
@@ -614,7 +635,6 @@ class Estimator(pl.LightningModule):
 
                 mae_avg = np.mean(np.array(mae_avg))
                 self.log(f"{epoch_type} AVERAGE MAE", mae_avg, batch_size=self.batch_size)
-
 
         return metrics, y_pred, y_true
 

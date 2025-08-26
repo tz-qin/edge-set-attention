@@ -1074,10 +1074,24 @@ def get_dataset_train_val_test(dataset, dataset_dir, **kwargs):
     elif "hetero" in dataset:
         return load_heterophilic(dataset, dataset_dir, **kwargs)
     elif dataset == "FFPM_MOLECULAR":
-        # For FFPM molecular dataset, dataset_dir should be the parquet file path
-        # and target_name should be specified in kwargs
-        target_column = kwargs.get('target_name', 'property_value::Mic-CRO')
-        return get_ffpm_molecular_dataset_train_val_test(dataset_dir, target_column, **kwargs)
+        # Use clean data loading interface
+        target_name = kwargs.get('target_name', None)
+        target_columns = kwargs.get('target_columns', None)
+        
+        # For backward compatibility, fall back to legacy implementation
+        # New code should use the clean interface directly
+        kwargs_clean = {k: v for k, v in kwargs.items() if k not in ['target_name', 'target_columns']}
+        
+        if target_columns is not None:
+            # Multi-task mode is no longer supported in legacy interface
+            raise ValueError(
+                "Multi-task learning is no longer supported through the legacy data loading interface. "
+                "Use the new clean interface: from esa.estimators import setup_estimator_pipeline"
+            )
+        else:
+            # Single-task mode only
+            target_column = target_name if target_name is not None else 'property_value::Mic-CRO'
+            return get_ffpm_molecular_dataset_train_val_test(dataset_dir, target_column=target_column, **kwargs_clean)
     
 
 def get_dataset_train_val_test_with_indices_for_graphgps(dataset, dataset_dir, **kwargs):

@@ -260,10 +260,16 @@ class FormatSingleLabel(T.BaseTransform):
         if data is None:
             return data
 
-        if data.y.ndim == 0:
-            data.y = data.y.unsqueeze(0)
-        elif data.y.ndim == 2:
-            data.y = data.y.squeeze(1)
+        # Skip formatting for multi-task data (which uses multi_task_targets instead of y)
+        if hasattr(data, 'multi_task_targets') and not hasattr(data, 'y'):
+            return data
+        
+        # Only format if data.y exists
+        if hasattr(data, 'y') and data.y is not None:
+            if data.y.ndim == 0:
+                data.y = data.y.unsqueeze(0)
+            elif data.y.ndim == 2:
+                data.y = data.y.squeeze(1)
 
         return data
 

@@ -1,3 +1,21 @@
+"""
+LEGACY TRAINING SCRIPT - DEPRECATED MULTI-TASK IMPLEMENTATION
+
+WARNING: This training script contains a deprecated multi-task learning implementation
+that has known issues and poor code quality. 
+
+For new projects, please use the clean implementation:
+    python -m esa.train_clean --help
+
+The clean implementation provides:
+- Proper separation of concerns
+- Comprehensive error handling
+- Clean multi-task architecture
+- Better performance and reliability
+
+This legacy script is maintained only for backward compatibility.
+"""
+
 import sys
 import os
 import warnings
@@ -59,6 +77,9 @@ def main():
     parser.add_argument("--dataset-download-dir", type=str)
     parser.add_argument("--dataset-one-hot", default=True, action=argparse.BooleanOptionalAction)
     parser.add_argument("--dataset-target-name", type=str)
+    
+    # Legacy multi-task arguments (no longer supported)
+    # Use the new clean interface: python -m esa.train_clean --target-columns col1 col2 ...
 
     # Learning hyperparameters
     parser.add_argument("--lr", type=float)
@@ -130,6 +151,14 @@ def main():
     dataset_download_dir = argsdict["dataset_download_dir"]
     dataset_one_hot = argsdict["dataset_one_hot"]
     target_name = argsdict["dataset_target_name"]
+    
+    # Only single-task learning is supported in this legacy script
+    # For multi-task learning, use: python -m esa.train_clean --target-columns col1 col2 ...
+    print(f"Single-task learning mode with target: {target_name}")
+    
+    # Data loading arguments
+    data_loading_target_columns = None
+    data_loading_target_name = target_name
 
     # Learning hyperparameters
     batch_size = argsdict["batch_size"]
@@ -201,13 +230,14 @@ def main():
             )
         # Graph-level branch
         else:
+            # Single-task data loading only
             train, val, test, num_classes, task_type, scaler = get_dataset_train_val_test(
-                dataset=dataset,
-                dataset_dir=dataset_download_dir,
-                one_hot=dataset_one_hot,
-                target_name=target_name,
-                pe_types=posenc,
-            )
+                    dataset=dataset,
+                    dataset_dir=dataset_download_dir,
+                    one_hot=dataset_one_hot,
+                    target_name=data_loading_target_name,  # Use target_name for single-task
+                    pe_types=posenc,
+                )
 
         num_features = train[0].x.shape[-1]
         edge_dim = None
@@ -287,6 +317,8 @@ def main():
         posenc=posenc, num_mlp_layers=num_mlp_layers, pre_or_post=pre_or_post,
         use_mlp_ln=use_mlp_ln, mlp_dropout=mlp_dropout,
         use_molecular_descriptors=use_molecular_descriptors, molecular_descriptor_dim=molecular_descriptor_dim,
+        # Multi-task learning parameters
+        multi_task_target_columns=multi_task_target_columns if enable_multi_task else None,
     )
 
     if dataset != "ocp":

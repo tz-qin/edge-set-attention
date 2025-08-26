@@ -101,7 +101,8 @@ python -m esa.train \
 python -m esa.train \
     --dataset FFPM_MOLECULAR \
     --dataset-download-dir /rxrx/data/user/thomas.qin/hclint \
-    --dataset-target-name property_value::Mic-CRO \
+    --enable-multi-task \
+    --multi-task-target-columns property_value::Mic-CRO property_value::Mic-RADME property_value::Hep-CRO \
     --dataset-one-hot \
     --use-molecular-descriptors \
     --molecular-descriptor-dim 10 \
@@ -201,6 +202,205 @@ from typing import List, Optional, Tuple, Dict, Any
 
 from data_loading.transforms import AddMaxEdge, AddMaxNode, AddMaxEdgeGlobal, AddMaxNodeGlobal, FormatSingleLabel
 import torch_geometric.transforms as T
+
+
+class FFPMMolecularDatasetMultiTask(InMemoryDataset):
+    """
+    Multi-task PyTorch Geometric dataset for molecular data featurized with FFPM.
+    
+    This dataset handles multiple target columns simultaneously for multi-task learning.
+    Similar to FFPMMolecularDataset but stores multiple targets per molecule.
+    """
+    
+    def __init__(
+        self,
+        parquet_path: str,
+        target_columns: List[str],
+        task_type: str = "regression",
+        transform=None,
+        pre_transform=None,
+        pre_filter=None,
+    ):
+        """
+        Initialize FFPM Multi-Task Molecular dataset.
+        
+        Args:
+            parquet_path: Path to the featurized parquet file
+            target_columns: List of column names for target variables (e.g., ["property_value::Mic-CRO", "property_value::Mic-RADME"])
+            task_type: "regression" or "classification"
+            transform: PyG transform to apply on-the-fly
+            pre_transform: PyG transform to apply during processing
+            pre_filter: PyG filter to apply during processing
+        """
+        self.parquet_path = parquet_path
+        self.target_columns = target_columns
+        self.task_type = task_type
+            
+        # Create unique cache directory based on parquet file path and target columns
+        import os
+        import hashlib
+        parquet_name = os.path.basename(parquet_path)
+        path_hash = hashlib.md5(parquet_path.encode()).hexdigest()[:8]
+        targets_str = "_".join(sorted(target_columns))
+        targets_hash = hashlib.md5(targets_str.encode()).hexdigest()[:8]
+        
+        cache_dir = f"./cache_ffpm_mt_{parquet_name}_{targets_hash}_{path_hash}"
+        
+        super().__init__(cache_dir, transform, pre_transform, pre_filter)
+        self.data, self.slices = torch.load(self.processed_paths[0], weights_only=False)
+    
+    @property
+    def raw_file_names(self):
+        return [self.parquet_path.split('/')[-1]]
+    
+    @property
+    def processed_file_names(self):
+        return ['data.pt']
+    
+    def download(self):
+        # No download needed - data is already local
+        pass
+    
+    def process(self):
+        """Process FFPM featurized data into PyG format for multi-task learning."""
+        print(f"Loading multi-task data from {self.parquet_path}")
+        df = pd.read_parquet(self.parquet_path)
+        
+        # Filter out rows that don't have at least one valid target value
+        valid_mask = df[self.target_columns].notna().any(axis=1)
+        df = df[valid_mask]
+        print(f"Processing {len(df)} molecules with at least one valid target")
+        
+        # Print target statistics
+        for target_col in self.target_columns:
+            valid_count = df[target_col].notna().sum()
+            print(f"  {target_col}: {valid_count} molecules ({valid_count/len(df)*100:.1f}%)")
+        
+        data_list = []
+        failed_conversions = 0
+        
+        for idx, row in tqdm(df.iterrows(), total=len(df), desc="Converting molecules"):
+            try:
+                data = self._convert_row_to_pyg(row)
+                if data is not None:
+                    data_list.append(data)
+                else:
+                    failed_conversions += 1
+            except Exception as e:
+                print(f"Failed to convert molecule {idx}: {e}")
+                failed_conversions += 1
+        
+        print(f"Successfully converted {len(data_list)} molecules")
+        print(f"Failed to convert {failed_conversions} molecules")
+        
+        if self.pre_filter is not None:
+            data_list = [data for data in data_list if self.pre_filter(data)]
+        
+        if self.pre_transform is not None:
+            data_list = [self.pre_transform(data) for data in data_list]
+        
+        data, slices = self.collate(data_list)
+        torch.save((data, slices), self.processed_paths[0])
+    
+    def _convert_row_to_pyg(self, row: pd.Series) -> Optional[Data]:
+        """
+        Convert a single row of FFPM featurized data to PyG Data object for multi-task learning.
+        
+        Clean implementation: stores targets as a single tensor with NaN for missing values.
+        """
+        try:
+            # Extract GNN2D features (same as single-task)
+            atom_features = np.array(row['gnn2d_atom_features'])
+            atom_numbers = np.array(row['gnn2d_atom_numbers'])
+            bond_features = np.array(row['gnn2d_bond_features'])
+            bond_idxs = np.array(row['gnn2d_bond_idxs'])
+            
+            # Validate data shapes
+            num_atoms = len(atom_features)
+            num_bonds = len(bond_features)
+            
+            if num_atoms == 0 or num_bonds == 0:
+                return None
+            
+            # Convert atom features to tensor
+            atom_features_list = [np.array(feat, dtype=np.float32) for feat in atom_features]
+            x = torch.tensor(np.stack(atom_features_list), dtype=torch.float)
+            
+            # Convert bond indices to edge_index
+            edge_pairs = []
+            for bond_idx in bond_idxs:
+                if isinstance(bond_idx, np.ndarray) and len(bond_idx) == 2:
+                    edge_pairs.append(bond_idx)
+                else:
+                    return None
+            
+            if len(edge_pairs) == 0:
+                return None
+                
+            edge_index = torch.tensor(np.array(edge_pairs).T, dtype=torch.long)
+            
+            # Convert bond features to edge attributes
+            bond_features_list = [np.array(feat, dtype=np.float32) for feat in bond_features]
+            edge_attr = torch.tensor(np.stack(bond_features_list), dtype=torch.float)
+            
+            # Ensure edge_index and edge_attr have compatible shapes
+            if edge_index.shape[1] != edge_attr.shape[0]:
+                return None
+            
+            # Make graph undirected (ESA expects undirected graphs)
+            edge_index, edge_attr = to_undirected(edge_index, edge_attr)
+            
+            # Extract multiple target variables as a simple tensor
+            # Shape: [num_tasks] with NaN for missing targets
+            targets = []
+            has_any_target = False
+            
+            for target_col in self.target_columns:
+                if target_col in row.index and pd.notna(row[target_col]):
+                    targets.append(float(row[target_col]))
+                    has_any_target = True
+                else:
+                    # Use NaN for missing targets
+                    targets.append(float('nan'))
+            
+            # Skip molecules with no valid targets at all
+            if not has_any_target:
+                return None
+            
+            y = torch.tensor(targets, dtype=torch.float)
+            
+            # Extract molecular descriptors (same as single-task)
+            default_molecular_descriptor_cols = [
+                'x_log_p', 'aromatic_ring_count', 'molecular_weight',
+                'num_acceptors', 'num_donors', 'rotatable_bonds', 
+                'tpsa', 'log_d', 'most_acidic_pka', 'most_basic_pka'
+            ]
+            
+            mol_descriptors = []
+            for col in default_molecular_descriptor_cols:
+                if col in row.index and not pd.isna(row[col]):
+                    mol_descriptors.append(float(row[col]))
+                else:
+                    mol_descriptors.append(0.0)  # Default value for missing descriptors
+            
+            mol_desc_tensor = torch.tensor(mol_descriptors, dtype=torch.float)
+            
+            # Create PyG Data object with clean target structure
+            data = Data(
+                x=x,
+                edge_index=edge_index,
+                edge_attr=edge_attr,
+                y=y,  # Multi-task targets: [num_tasks] with NaN for missing
+                smiles=row['canonical_smiles'],
+                num_nodes=num_atoms,
+                molecular_descriptors=mol_desc_tensor,
+            )
+            
+            return data
+            
+        except Exception as e:
+            print(f"Error converting row: {e}")
+            return None
 
 
 class FFPMMolecularDataset(InMemoryDataset):
@@ -656,9 +856,244 @@ def load_ffpm_molecular_data(
     return train_dataset, val_dataset, test_dataset, num_classes, task_type, scaler
 
 
+def load_ffpm_molecular_data_with_predefined_splits_multi_task(
+    train_parquet_path: str,
+    test_parquet_path: str,
+    target_columns: List[str],
+    task_type: str = "regression",
+    val_frac: float = 0.2,
+    random_seed: int = 42,
+    pe_types: List[str] = None,
+    **kwargs
+) -> Tuple[FFPMMolecularDataset, FFPMMolecularDataset, FFPMMolecularDataset, int, str, Optional[StandardScaler]]:
+    """
+    Load FFPM molecular data using pre-defined train/test splits for multi-task learning.
+    
+    Similar to the single-task version but handles multiple target columns.
+    """
+    
+    # Set up transforms for ESA compatibility
+    transforms = [AddMaxEdge(), AddMaxNode()]
+    if task_type == "regression":
+        transforms.append(FormatSingleLabel())
+    
+    # Load train dataset with multi-task targets
+    print(f"Loading multi-task training data from {train_parquet_path}")
+    train_dataset = FFPMMolecularDatasetMultiTask(
+        parquet_path=train_parquet_path,
+        target_columns=target_columns,
+        task_type=task_type,
+        pre_transform=T.Compose(transforms),
+    )
+    
+    # Load test dataset with multi-task targets
+    print(f"Loading multi-task test data from {test_parquet_path}")
+    test_dataset = FFPMMolecularDatasetMultiTask(
+        parquet_path=test_parquet_path,
+        target_columns=target_columns,
+        task_type=task_type,
+        pre_transform=T.Compose(transforms),
+    )
+    
+    print(f"\nTrain dataset: {len(train_dataset)} molecules")
+    print(f"Test dataset: {len(test_dataset)} molecules")
+    if len(train_dataset) > 0:
+        sample = train_dataset[0]
+        print(f"Node feature dim: {sample.x.shape[1]}")
+        print(f"Edge feature dim: {sample.edge_attr.shape[1] if sample.edge_attr is not None else 0}")
+        print(f"Target shape: {sample.y.shape}")
+    
+    # Calculate global statistics across both train and test sets
+    all_data = list(train_dataset) + list(test_dataset)
+    max_nodes = max([data.num_nodes for data in all_data])
+    max_edges = max([data.edge_index.shape[1] for data in all_data])
+    
+    print(f"Max nodes per graph: {max_nodes}")
+    print(f"Max edges per graph: {max_edges}")
+    
+    # Add global max transforms
+    global_transforms = T.Compose([
+        AddMaxEdgeGlobal(max_edges),
+        AddMaxNodeGlobal(max_nodes)
+    ])
+    
+    # Apply global transforms to all data
+    print("Applying global transforms...")
+    train_data = [global_transforms(data) for data in tqdm(train_dataset, desc="Processing train")]
+    test_data = [global_transforms(data) for data in tqdm(test_dataset, desc="Processing test")]
+    
+    # Split training data into train/validation
+    torch.manual_seed(random_seed)
+    train_size = len(train_data)
+    val_size = int(val_frac * train_size)
+    actual_train_size = train_size - val_size
+    
+    indices = torch.randperm(train_size)
+    train_indices = indices[:actual_train_size]
+    val_indices = indices[actual_train_size:]
+    
+    actual_train_data = [train_data[i] for i in train_indices]
+    val_data = [train_data[i] for i in val_indices]
+    
+    # Handle target scaling for regression (per task)
+    scalers = {}
+    if task_type == "regression":
+        for task_idx, target_col in enumerate(target_columns):
+            # Collect training targets for this task (exclude NaN values)
+            train_targets = []
+            for data in actual_train_data:
+                target_value = data.y[task_idx].item()
+                if not np.isnan(target_value):
+                    train_targets.append(target_value)
+            
+            if len(train_targets) > 0:
+                scaler = StandardScaler()
+                scaler.fit(np.array(train_targets).reshape(-1, 1))
+                scalers[target_col] = scaler
+                
+                # Apply scaling to all splits for this task (skip NaN values)
+                for data in actual_train_data + val_data + test_data:
+                    target_value = data.y[task_idx].item()
+                    if not np.isnan(target_value):
+                        scaled_value = scaler.transform([[target_value]])[0][0]
+                        data.y[task_idx] = torch.tensor(scaled_value, dtype=torch.float)
+    
+    # Create final datasets
+    from data_loading.data_loading import CustomPyGDataset
+    final_train_dataset = CustomPyGDataset(actual_train_data)
+    final_val_dataset = CustomPyGDataset(val_data)
+    final_test_dataset = CustomPyGDataset(test_data)
+    
+    # For multi-task, num_classes is the number of tasks
+    num_classes = len(target_columns)
+    task_type = "multi_task_regression" if task_type == "regression" else "multi_task_classification"
+    
+    print(f"\nFinal dataset split:")
+    print(f"  Train: {len(final_train_dataset)} molecules")
+    print(f"  Val: {len(final_val_dataset)} molecules")
+    print(f"  Test: {len(final_test_dataset)} molecules")
+    print(f"  Task type: {task_type}")
+    print(f"  Num tasks: {num_classes}")
+    
+    return final_train_dataset, final_val_dataset, final_test_dataset, num_classes, task_type, scalers
+
+
+def load_ffpm_molecular_data_multi_task(
+    parquet_path: str,
+    target_columns: List[str],
+    task_type: str = "regression",
+    train_frac: float = 0.7,
+    val_frac: float = 0.15,
+    random_seed: int = 42,
+    pe_types: List[str] = None,
+    **kwargs
+) -> Tuple[FFPMMolecularDataset, FFPMMolecularDataset, FFPMMolecularDataset, int, str, Optional[StandardScaler]]:
+    """
+    Load FFPM molecular data with random train/val/test splitting for multi-task learning.
+    
+    Similar to the single-task version but handles multiple target columns.
+    """
+    
+    # Set up transforms for ESA compatibility
+    transforms = [AddMaxEdge(), AddMaxNode()]
+    if task_type == "regression":
+        transforms.append(FormatSingleLabel())
+    
+    # Create dataset
+    dataset = FFPMMolecularDatasetMultiTask(
+        parquet_path=parquet_path,
+        target_columns=target_columns,
+        task_type=task_type,
+        pre_transform=T.Compose(transforms),
+    )
+    
+    print(f"\nMulti-task dataset loaded: {len(dataset)} molecules")
+    if len(dataset) > 0:
+        sample = dataset[0]
+        print(f"Node feature dim: {sample.x.shape[1]}")
+        print(f"Edge feature dim: {sample.edge_attr.shape[1] if sample.edge_attr is not None else 0}")
+        print(f"Target shape: {sample.y.shape}")
+    
+    # Calculate dataset statistics for global max nodes/edges
+    max_nodes = max([data.num_nodes for data in dataset])
+    max_edges = max([data.edge_index.shape[1] for data in dataset])
+    
+    print(f"Max nodes per graph: {max_nodes}")
+    print(f"Max edges per graph: {max_edges}")
+    
+    # Add global max transforms
+    global_transforms = T.Compose([
+        AddMaxEdgeGlobal(max_edges),
+        AddMaxNodeGlobal(max_nodes)
+    ])
+    
+    # Apply global transforms
+    print("Applying global transforms...")
+    processed_data = [global_transforms(data) for data in tqdm(dataset)]
+    
+    # Split dataset
+    torch.manual_seed(random_seed)
+    total_size = len(processed_data)
+    train_size = int(train_frac * total_size)
+    val_size = int(val_frac * total_size)
+    test_size = total_size - train_size - val_size
+    
+    indices = torch.randperm(total_size)
+    train_indices = indices[:train_size]
+    val_indices = indices[train_size:train_size + val_size]
+    test_indices = indices[train_size + val_size:]
+    
+    train_data = [processed_data[i] for i in train_indices]
+    val_data = [processed_data[i] for i in val_indices]
+    test_data = [processed_data[i] for i in test_indices]
+    
+    # Handle target scaling for regression (per task)
+    scalers = {}
+    if task_type == "regression":
+        for task_idx, target_col in enumerate(target_columns):
+            # Collect training targets for this task (exclude NaN values)
+            train_targets = []
+            for data in train_data:
+                target_value = data.y[task_idx].item()
+                if not np.isnan(target_value):
+                    train_targets.append(target_value)
+            
+            if len(train_targets) > 0:
+                scaler = StandardScaler()
+                scaler.fit(np.array(train_targets).reshape(-1, 1))
+                scalers[target_col] = scaler
+                
+                # Apply scaling to all splits for this task (skip NaN values)
+                for data in train_data + val_data + test_data:
+                    target_value = data.y[task_idx].item()
+                    if not np.isnan(target_value):
+                        scaled_value = scaler.transform([[target_value]])[0][0]
+                        data.y[task_idx] = torch.tensor(scaled_value, dtype=torch.float)
+    
+    # Create final datasets
+    from data_loading.data_loading import CustomPyGDataset
+    train_dataset = CustomPyGDataset(train_data)
+    val_dataset = CustomPyGDataset(val_data)
+    test_dataset = CustomPyGDataset(test_data)
+    
+    # For multi-task, num_classes is the number of tasks
+    num_classes = len(target_columns)
+    task_type = "multi_task_regression" if task_type == "regression" else "multi_task_classification"
+    
+    print(f"\nDataset split:")
+    print(f"  Train: {len(train_dataset)} molecules")
+    print(f"  Val: {len(val_dataset)} molecules")
+    print(f"  Test: {len(test_dataset)} molecules")
+    print(f"  Task type: {task_type}")
+    print(f"  Num tasks: {num_classes}")
+    
+    return train_dataset, val_dataset, test_dataset, num_classes, task_type, scalers
+
+
 def get_ffpm_molecular_dataset_train_val_test(
     dataset_dir: str,
-    target_column: str,
+    target_column: str = None,
+    target_columns: List[str] = None,
     **kwargs
 ) -> Tuple[FFPMMolecularDataset, FFPMMolecularDataset, FFPMMolecularDataset, int, str, Optional[StandardScaler]]:
     """
@@ -717,28 +1152,59 @@ def get_ffpm_molecular_dataset_train_val_test(
     """
     import os
     
+    # Validate arguments: exactly one of target_column or target_columns should be provided
+    if target_column is not None and target_columns is not None:
+        raise ValueError("Provide either target_column (single-task) or target_columns (multi-task), not both")
+    if target_column is None and target_columns is None:
+        raise ValueError("Must provide either target_column (single-task) or target_columns (multi-task)")
+    
+    # Determine if this is multi-task learning
+    is_multi_task = target_columns is not None
+    
+    if is_multi_task:
+        print(f"Multi-task learning mode: {len(target_columns)} targets")
+        for i, target in enumerate(target_columns):
+            print(f"  Task {i+1}: {target}")
+    else:
+        print(f"Single-task learning mode: {target_column}")
+    
     # Remove 'target_name' if it's in kwargs to avoid duplication since we handle it separately
     kwargs_clean = {k: v for k, v in kwargs.items() if k != 'target_name'}
     
     # Check if dataset_dir is a single file or directory
     if os.path.isfile(dataset_dir):
         # Single file - use random splitting
-        return load_ffpm_molecular_data(dataset_dir, target_column, **kwargs_clean)
+        if is_multi_task:
+            return load_ffpm_molecular_data_multi_task(dataset_dir, target_columns, **kwargs_clean)
+        else:
+            return load_ffpm_molecular_data(dataset_dir, target_column, **kwargs_clean)
     
     # Directory - check for pre-defined split files
-    train_file = os.path.join(dataset_dir, "stl_train_set_08_10.parquet")
-    test_file = os.path.join(dataset_dir, "test_set_08_10.parquet")
-    # train_file = os.path.join(dataset_dir, "train_random.parquet")
-    # test_file = os.path.join(dataset_dir, "test_random.parquet")
+    if is_multi_task:
+        # Multi-task: use mtl_train_set_data_08_14.parquet for training
+        train_file = os.path.join(dataset_dir, "mtl_train_set_data_08_14.parquet")
+        test_file = os.path.join(dataset_dir, "test_set_08_10.parquet")
+    else:
+        # Single-task: use existing stl_train_set_08_10.parquet
+        train_file = os.path.join(dataset_dir, "stl_train_set_08_10.parquet")
+        test_file = os.path.join(dataset_dir, "test_set_08_10.parquet")
     
     if os.path.exists(train_file) and os.path.exists(test_file):
         print(f"Found pre-defined train/test splits: {train_file}, {test_file}")
-        return load_ffpm_molecular_data_with_predefined_splits(
-            train_parquet_path=train_file,
-            test_parquet_path=test_file,
-            target_column=target_column,
-            **kwargs_clean
-        )
+        if is_multi_task:
+            return load_ffpm_molecular_data_with_predefined_splits_multi_task(
+                train_parquet_path=train_file,
+                test_parquet_path=test_file,
+                target_columns=target_columns,
+                **kwargs_clean
+            )
+        else:
+            return load_ffpm_molecular_data_with_predefined_splits(
+                train_parquet_path=train_file,
+                test_parquet_path=test_file,
+                target_column=target_column,
+                **kwargs_clean
+            )
     else:
         # Fall back to single dataset file approach
         # Look for dataset_feated.parquet or other parquet files
